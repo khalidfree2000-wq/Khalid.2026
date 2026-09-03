@@ -1,0 +1,17 @@
+{
+  "name": "برنامج محاسبة مكتب الدعاية والإعلان",
+  "short_name": "محاسبة الدعاية",
+  "description": "إدارة المشتريات والمبيعات والفواتير لمكتب الدعاية والإعلان",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EFEDE6",
+  "theme_color": "#1C1B1A",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
