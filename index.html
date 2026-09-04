@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>برنامج محاسبة مكتب الدعاية والإعلان</title>
-<link rel="manifest" href="manifest.json">
+<title>محاسبة ألوان للدعاية</title>
+<link rel="manifest" id="manifestLink" href="manifest.json">
 <meta name="theme-color" content="#1C1B1A">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="محاسبة الدعاية">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="ألوان للدعاية">
+<link rel="icon" id="faviconLink" href="icon-192.png">
+<link rel="apple-touch-icon" id="appleTouchIconLink" href="icon-192.png">
 <style>
   :root{
     --paper:#EFEDE6;
@@ -123,10 +123,41 @@
   .invoice-head{display:flex;justify-content:space-between;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:18px;}
   .invoice-head h2{font-family:Georgia,serif;margin:0;font-size:20px;}
   ::placeholder{color:#b7b3a8;}
+
+  .mobile-topbar{
+    display:none;position:fixed;top:0;right:0;left:0;height:56px;
+    background:var(--ink);color:#fff;align-items:center;justify-content:space-between;
+    padding:0 16px;z-index:998;font-size:15px;
+  }
+  .hamburger-btn{
+    background:transparent;border:none;color:#fff;font-size:24px;padding:4px 8px;line-height:1;
+  }
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;}
+  .sidebar-overlay.show{display:block;}
+
+  @media (max-width:820px){
+    .mobile-topbar{display:flex;}
+    .sidebar{
+      position:fixed;top:0;right:0;height:100%;width:250px;
+      transform:translateX(100%);transition:transform .25s ease;z-index:1000;
+      overflow-y:auto;
+    }
+    .sidebar.open{transform:translateX(0);}
+    .main{padding-top:76px;padding-left:16px;padding-right:16px;max-width:100%;}
+    .app{display:block;}
+  }
 </style>
 </head>
 <body>
 <div class="app">
+
+  <div class="mobile-topbar no-print">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="القائمة">☰</button>
+    <span id="mobileTitle">مكتب الدعاية والإعلان</span>
+    <span style="width:32px;"></span>
+  </div>
+  <div class="sidebar-overlay no-print" id="sidebarOverlay"></div>
+
 
   <div class="sidebar no-print">
     <div class="brand" id="officeNameSidebar">مكتب الدعاية والإعلان
@@ -191,6 +222,7 @@
 
         <div class="row" style="margin-top:18px;">
           <button class="btn-stamp" id="saveInvoiceBtn">حفظ الفاتورة</button>
+          <button id="cancelInvoiceEditBtn" style="display:none;">إلغاء التعديل</button>
         </div>
       </div>
 
@@ -219,6 +251,7 @@
           <div class="field" style="max-width:160px;"><label>التاريخ</label><input type="date" id="pDate"></div>
         </div>
         <button class="btn-primary" id="addPurchaseBtn">حفظ عملية الشراء</button>
+        <button id="cancelPurchaseEditBtn" style="display:none;">إلغاء التعديل</button>
       </div>
 
       <div class="panel">
@@ -244,6 +277,7 @@
           <div class="field" style="max-width:160px;"><label>سعر التكلفة</label><input type="number" id="prodCost" value="0" min="0"></div>
         </div>
         <button class="btn-primary" id="addProductBtn">حفظ المنتج</button>
+        <button id="cancelProductEditBtn" style="display:none;">إلغاء التعديل</button>
       </div>
 
       <div class="panel">
@@ -266,6 +300,7 @@
           <div class="field" style="max-width:190px;"><label>تكلفة الطباعة للمتر</label><input type="number" id="mtCost" value="0" min="0"></div>
         </div>
         <button class="btn-primary" id="addMeterTypeBtn">حفظ الخامة</button>
+        <button id="cancelMeterEditBtn" style="display:none;">إلغاء التعديل</button>
       </div>
 
       <div class="panel">
@@ -301,6 +336,20 @@
           <div class="field"><label>العنوان</label><input type="text" id="setAddress" placeholder="المدينة - الحي - الشارع"></div>
         </div>
         <button class="btn-primary" id="saveSettingsBtn">حفظ الإعدادات</button>
+      </div>
+
+      <div class="panel">
+        <h2>أيقونة التطبيق</h2>
+        <p class="subtitle" style="margin-bottom:14px;">اختر صورة مربعة من جهازك لتكون أيقونة التطبيق.</p>
+        <div class="row" style="align-items:center;">
+          <img id="iconPreview" src="icon-192.png" style="width:64px;height:64px;border-radius:14px;border:1px solid var(--line);object-fit:cover;">
+          <input type="file" id="iconFileInput" accept="image/*" style="flex:2;">
+        </div>
+        <button class="btn-primary" id="applyIconBtn" style="margin-top:12px;">تحديث الأيقونة</button>
+        <p class="subtitle" style="margin-top:12px;">
+          بعد التحديث: احذف اختصار التطبيق القديم من شاشتك الرئيسية (إن وجد) ثم أضِفه من جديد
+          (⋮ ← Add to Home screen) حتى تظهر الأيقونة الجديدة — المتصفح لا يحدّث الاختصارات المثبتة تلقائياً.
+        </p>
       </div>
 
       <div class="panel">
@@ -340,7 +389,7 @@ let products = [];
 let meterTypes = [];
 let purchases = [];
 let invoices = [];
-let settings = { officeName: 'مكتب الدعاية والإعلان', phone: '', address: '', currency: 'ر.س' };
+let settings = { officeName: 'ألوان للدعاية', phone: '', address: '', currency: 'ر.س' };
 let invoiceCounter = 1;
 
 let currentInvoiceItems = []; // {type, id, name, qty, unitPrice, width, height, area, printCost, lineTotal}
@@ -382,6 +431,16 @@ async function loadAll(){
 function uid(){ return 'id' + Date.now() + Math.floor(Math.random()*1000); }
 
 /* ---------- NAVIGATION ---------- */
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+document.getElementById('hamburgerBtn').addEventListener('click', ()=>{
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+});
+document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
 document.querySelectorAll('.nav-item').forEach(item=>{
   item.addEventListener('click', ()=>{
     document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
@@ -390,12 +449,14 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     document.getElementById('tab-' + item.dataset.tab).style.display='block';
     if(item.dataset.tab==='dashboard') renderDashboard();
     if(item.dataset.tab==='reports') renderReports();
+    closeSidebar();
   });
 });
 
 /* ---------- DASHBOARD ---------- */
 function renderDashboard(){
   document.getElementById('officeNameSidebar').childNodes[0].textContent = settings.officeName + ' ';
+  document.getElementById('mobileTitle').textContent = settings.officeName;
   document.getElementById('todayDate').textContent = 'بيانات محدثة حتى اليوم';
 
   const today = todayStr();
@@ -527,6 +588,8 @@ function renderInvoiceTotals(){
 }
 document.getElementById('invDiscount').addEventListener('input', renderInvoiceTotals);
 
+let editingInvoiceNumber = null;
+
 async function saveInvoice(){
   if(currentInvoiceItems.length===0){ alert('أضف صنفاً واحداً على الأقل قبل الحفظ.'); return; }
   const customer = document.getElementById('custName').value.trim();
@@ -534,16 +597,28 @@ async function saveInvoice(){
   const date = document.getElementById('invDate').value || todayStr();
   const t = computeInvoiceTotals();
 
-  const invoice = {
-    number: invoiceCounter,
-    customer, date,
-    items: JSON.parse(JSON.stringify(currentInvoiceItems)),
-    subtotal: t.subtotal, printCost: t.printCostTotal, discount: t.discount, total: t.net
-  };
-  invoices.push(invoice);
-  invoiceCounter += 1;
+  let invoice;
+  if(editingInvoiceNumber !== null){
+    invoice = invoices.find(i=>i.number===editingInvoiceNumber);
+    invoice.customer = customer;
+    invoice.date = date;
+    invoice.items = JSON.parse(JSON.stringify(currentInvoiceItems));
+    invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.discount = t.discount; invoice.total = t.net;
+    editingInvoiceNumber = null;
+    document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
+    document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
+  } else {
+    invoice = {
+      number: invoiceCounter,
+      customer, date,
+      items: JSON.parse(JSON.stringify(currentInvoiceItems)),
+      subtotal: t.subtotal, printCost: t.printCostTotal, discount: t.discount, total: t.net
+    };
+    invoices.push(invoice);
+    invoiceCounter += 1;
+    await Store.set('invoiceCounter', invoiceCounter);
+  }
   await Store.set('invoices', invoices);
-  await Store.set('invoiceCounter', invoiceCounter);
 
   currentInvoiceItems = [];
   document.getElementById('custName').value='';
@@ -556,6 +631,40 @@ async function saveInvoice(){
 }
 document.getElementById('saveInvoiceBtn').addEventListener('click', saveInvoice);
 
+function editInvoice(number){
+  const inv = invoices.find(i=>i.number===number);
+  if(!inv) return;
+  document.getElementById('custName').value = inv.customer;
+  document.getElementById('invDate').value = inv.date;
+  document.getElementById('invDiscount').value = inv.discount;
+  currentInvoiceItems = JSON.parse(JSON.stringify(inv.items));
+  editingInvoiceNumber = number;
+  document.getElementById('saveInvoiceBtn').textContent = 'تحديث الفاتورة #' + number;
+  document.getElementById('cancelInvoiceEditBtn').style.display = 'inline-block';
+  renderInvoiceItemsUI();
+  document.getElementById('custName').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelInvoiceEdit(){
+  editingInvoiceNumber = null;
+  currentInvoiceItems = [];
+  document.getElementById('custName').value='';
+  document.getElementById('invDiscount').value=0;
+  document.getElementById('invDate').value='';
+  document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
+  document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
+  renderInvoiceItemsUI();
+}
+document.getElementById('cancelInvoiceEditBtn').addEventListener('click', cancelInvoiceEdit);
+
+async function deleteInvoice(number){
+  if(!confirm('هل تريد حذف الفاتورة رقم #' + number + '؟')) return;
+  invoices = invoices.filter(i=>i.number!==number);
+  await Store.set('invoices', invoices);
+  renderInvoicesTable();
+  renderDashboard();
+}
+
 function updateInvoiceNumberBadge(){
   document.getElementById('invNumberBadge').textContent = '#' + invoiceCounter;
 }
@@ -566,7 +675,11 @@ function renderInvoicesTable(){
   tbody.innerHTML = sorted.map(i=>`
     <tr>
       <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
-      <td><button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')})">طباعة</button></td>
+      <td>
+        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')})">طباعة</button>
+        <button class="icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل">✎</button>
+        <button class="icon-btn" onclick="deleteInvoice(${i.number})" title="حذف">✕</button>
+      </td>
     </tr>
   `).join('');
   document.getElementById('invoicesEmpty').style.display = sorted.length? 'none':'block';
@@ -686,6 +799,8 @@ function printSalesReport(){
 document.getElementById('exportSalesPdfBtn').addEventListener('click', printSalesReport);
 
 /* ---------- PURCHASES ---------- */
+let editingPurchaseId = null;
+
 async function addPurchase(){
   const supplier = document.getElementById('pSupplier').value.trim();
   const item = document.getElementById('pItem').value.trim();
@@ -693,7 +808,16 @@ async function addPurchase(){
   const unitCost = Number(document.getElementById('pUnitCost').value)||0;
   const date = document.getElementById('pDate').value || todayStr();
   if(!supplier || !item){ alert('أدخل اسم المورد والصنف.'); return; }
-  purchases.push({id:uid(), supplier, item, qty, unitCost, total: qty*unitCost, date});
+
+  if(editingPurchaseId){
+    const p = purchases.find(x=>x.id===editingPurchaseId);
+    if(p){ p.supplier=supplier; p.item=item; p.qty=qty; p.unitCost=unitCost; p.total=qty*unitCost; p.date=date; }
+    editingPurchaseId = null;
+    document.getElementById('addPurchaseBtn').textContent = 'حفظ عملية الشراء';
+    document.getElementById('cancelPurchaseEditBtn').style.display = 'none';
+  } else {
+    purchases.push({id:uid(), supplier, item, qty, unitCost, total: qty*unitCost, date});
+  }
   await Store.set('purchases', purchases);
   document.getElementById('pSupplier').value='';
   document.getElementById('pItem').value='';
@@ -704,7 +828,34 @@ async function addPurchase(){
 }
 document.getElementById('addPurchaseBtn').addEventListener('click', addPurchase);
 
+function editPurchase(id){
+  const p = purchases.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('pSupplier').value = p.supplier;
+  document.getElementById('pItem').value = p.item;
+  document.getElementById('pQty').value = p.qty;
+  document.getElementById('pUnitCost').value = p.unitCost;
+  document.getElementById('pDate').value = p.date;
+  editingPurchaseId = id;
+  document.getElementById('addPurchaseBtn').textContent = 'تحديث عملية الشراء';
+  document.getElementById('cancelPurchaseEditBtn').style.display = 'inline-block';
+  document.getElementById('pSupplier').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelPurchaseEdit(){
+  editingPurchaseId = null;
+  document.getElementById('pSupplier').value='';
+  document.getElementById('pItem').value='';
+  document.getElementById('pQty').value=1;
+  document.getElementById('pUnitCost').value=0;
+  document.getElementById('pDate').value='';
+  document.getElementById('addPurchaseBtn').textContent = 'حفظ عملية الشراء';
+  document.getElementById('cancelPurchaseEditBtn').style.display = 'none';
+}
+document.getElementById('cancelPurchaseEditBtn').addEventListener('click', cancelPurchaseEdit);
+
 async function deletePurchase(id){
+  if(!confirm('هل تريد حذف عملية الشراء هذه؟')) return;
   purchases = purchases.filter(p=>p.id!==id);
   await Store.set('purchases', purchases);
   renderPurchasesTable();
@@ -716,19 +867,33 @@ function renderPurchasesTable(){
   tbody.innerHTML = sorted.map(p=>`
     <tr>
       <td>${p.date}</td><td>${p.supplier}</td><td>${p.item}</td><td>${p.qty}</td><td>${fmt(p.unitCost)}</td><td>${fmt(p.total)}</td>
-      <td><button class="icon-btn" onclick="deletePurchase('${p.id}')">✕</button></td>
+      <td>
+        <button class="icon-btn" style="color:var(--gold);" onclick="editPurchase('${p.id}')" title="تعديل">✎</button>
+        <button class="icon-btn" onclick="deletePurchase('${p.id}')" title="حذف">✕</button>
+      </td>
     </tr>
   `).join('');
   document.getElementById('purchasesEmpty').style.display = sorted.length? 'none':'block';
 }
 
 /* ---------- PRODUCTS CATALOG ---------- */
+let editingProductId = null;
+
 async function addProduct(){
   const name = document.getElementById('prodName').value.trim();
   const price = Number(document.getElementById('prodPrice').value)||0;
   const cost = Number(document.getElementById('prodCost').value)||0;
   if(!name){ alert('أدخل اسم المنتج.'); return; }
-  products.push({id:uid(), name, price, cost});
+
+  if(editingProductId){
+    const p = products.find(x=>x.id===editingProductId);
+    if(p){ p.name=name; p.price=price; p.cost=cost; }
+    editingProductId = null;
+    document.getElementById('addProductBtn').textContent = 'حفظ المنتج';
+    document.getElementById('cancelProductEditBtn').style.display = 'none';
+  } else {
+    products.push({id:uid(), name, price, cost});
+  }
   await Store.set('products', products);
   document.getElementById('prodName').value='';
   document.getElementById('prodPrice').value=0;
@@ -737,7 +902,30 @@ async function addProduct(){
 }
 document.getElementById('addProductBtn').addEventListener('click', addProduct);
 
+function editProduct(id){
+  const p = products.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('prodName').value = p.name;
+  document.getElementById('prodPrice').value = p.price;
+  document.getElementById('prodCost').value = p.cost;
+  editingProductId = id;
+  document.getElementById('addProductBtn').textContent = 'تحديث المنتج';
+  document.getElementById('cancelProductEditBtn').style.display = 'inline-block';
+  document.getElementById('prodName').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelProductEdit(){
+  editingProductId = null;
+  document.getElementById('prodName').value='';
+  document.getElementById('prodPrice').value=0;
+  document.getElementById('prodCost').value=0;
+  document.getElementById('addProductBtn').textContent = 'حفظ المنتج';
+  document.getElementById('cancelProductEditBtn').style.display = 'none';
+}
+document.getElementById('cancelProductEditBtn').addEventListener('click', cancelProductEdit);
+
 async function deleteProduct(id){
+  if(!confirm('هل تريد حذف هذا المنتج؟')) return;
   products = products.filter(p=>p.id!==id);
   await Store.set('products', products);
   renderProductsTable();
@@ -747,18 +935,32 @@ function renderProductsTable(){
   const tbody = document.querySelector('#productsTable tbody');
   tbody.innerHTML = products.map(p=>`
     <tr><td>${p.name}</td><td>${fmt(p.price)}</td><td>${fmt(p.cost)}</td>
-    <td><button class="icon-btn" onclick="deleteProduct('${p.id}')">✕</button></td></tr>
+    <td>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editProduct('${p.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteProduct('${p.id}')" title="حذف">✕</button>
+    </td></tr>
   `).join('');
   document.getElementById('productsEmpty').style.display = products.length? 'none':'block';
 }
 
 /* ---------- METER CATALOG ---------- */
+let editingMeterId = null;
+
 async function addMeterType(){
   const name = document.getElementById('mtName').value.trim();
   const price = Number(document.getElementById('mtPrice').value)||0;
   const printCost = Number(document.getElementById('mtCost').value)||0;
   if(!name){ alert('أدخل اسم الخامة.'); return; }
-  meterTypes.push({id:uid(), name, price, printCost});
+
+  if(editingMeterId){
+    const m = meterTypes.find(x=>x.id===editingMeterId);
+    if(m){ m.name=name; m.price=price; m.printCost=printCost; }
+    editingMeterId = null;
+    document.getElementById('addMeterTypeBtn').textContent = 'حفظ الخامة';
+    document.getElementById('cancelMeterEditBtn').style.display = 'none';
+  } else {
+    meterTypes.push({id:uid(), name, price, printCost});
+  }
   await Store.set('meterTypes', meterTypes);
   document.getElementById('mtName').value='';
   document.getElementById('mtPrice').value=0;
@@ -767,7 +969,30 @@ async function addMeterType(){
 }
 document.getElementById('addMeterTypeBtn').addEventListener('click', addMeterType);
 
+function editMeterType(id){
+  const m = meterTypes.find(x=>x.id===id);
+  if(!m) return;
+  document.getElementById('mtName').value = m.name;
+  document.getElementById('mtPrice').value = m.price;
+  document.getElementById('mtCost').value = m.printCost;
+  editingMeterId = id;
+  document.getElementById('addMeterTypeBtn').textContent = 'تحديث الخامة';
+  document.getElementById('cancelMeterEditBtn').style.display = 'inline-block';
+  document.getElementById('mtName').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelMeterEdit(){
+  editingMeterId = null;
+  document.getElementById('mtName').value='';
+  document.getElementById('mtPrice').value=0;
+  document.getElementById('mtCost').value=0;
+  document.getElementById('addMeterTypeBtn').textContent = 'حفظ الخامة';
+  document.getElementById('cancelMeterEditBtn').style.display = 'none';
+}
+document.getElementById('cancelMeterEditBtn').addEventListener('click', cancelMeterEdit);
+
 async function deleteMeterType(id){
+  if(!confirm('هل تريد حذف هذه الخامة؟')) return;
   meterTypes = meterTypes.filter(m=>m.id!==id);
   await Store.set('meterTypes', meterTypes);
   renderMeterTable();
@@ -777,7 +1002,10 @@ function renderMeterTable(){
   const tbody = document.querySelector('#meterTable tbody');
   tbody.innerHTML = meterTypes.map(m=>`
     <tr><td>${m.name}</td><td>${fmt(m.price)}</td><td>${fmt(m.printCost)}</td>
-    <td><button class="icon-btn" onclick="deleteMeterType('${m.id}')">✕</button></td></tr>
+    <td>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editMeterType('${m.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteMeterType('${m.id}')" title="حذف">✕</button>
+    </td></tr>
   `).join('');
   document.getElementById('meterEmpty').style.display = meterTypes.length? 'none':'block';
 }
@@ -828,6 +1056,72 @@ async function saveSettings(){
   alert('تم حفظ الإعدادات.');
 }
 document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+
+/* ---------- CUSTOM APP ICON ---------- */
+function fileToIconDataUrl(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('image load failed'));
+      img.onload = () => {
+        const size = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,size,size);
+        const scale = Math.min(size/img.width, size/img.height);
+        const w = img.width*scale, h = img.height*scale;
+        ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function applyCustomIcon(dataUrl){
+  document.getElementById('faviconLink').href = dataUrl;
+  document.getElementById('appleTouchIconLink').href = dataUrl;
+  document.getElementById('iconPreview').src = dataUrl;
+
+  const manifestObj = {
+    name: (settings.officeName || 'محاسبة') + ' - نظام المحاسبة',
+    short_name: settings.officeName || 'محاسبة',
+    start_url: './index.html',
+    scope: './',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#EFEDE6',
+    theme_color: '#1C1B1A',
+    dir: 'rtl',
+    lang: 'ar',
+    icons: [
+      { src: dataUrl, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: dataUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifestObj)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  document.getElementById('manifestLink').href = url;
+}
+
+document.getElementById('applyIconBtn').addEventListener('click', async ()=>{
+  const file = document.getElementById('iconFileInput').files[0];
+  if(!file){ alert('اختر صورة أولاً.'); return; }
+  try{
+    const dataUrl = await fileToIconDataUrl(file);
+    settings.customIcon = dataUrl;
+    await Store.set('settings', settings);
+    applyCustomIcon(dataUrl);
+    alert('تم تحديث الأيقونة. احذف اختصار التطبيق القديم من شاشتك الرئيسية (إن وجد) وأضِفه من جديد لتظهر الأيقونة الجديدة.');
+  }catch(e){
+    alert('تعذر معالجة هذه الصورة، جرب صورة أخرى.');
+  }
+});
 
 /* ---------- BACKUP EXPORT / IMPORT ---------- */
 function exportBackup(){
@@ -901,6 +1195,7 @@ async function init(){
   document.getElementById('setAddress').value = settings.address;
   document.getElementById('setCurrency').value = settings.currency || 'ر.س';
   document.getElementById('invDate').value = todayStr();
+  if(settings.customIcon){ applyCustomIcon(settings.customIcon); }
 
   renderDashboard();
   renderInvoiceItemsUI();
