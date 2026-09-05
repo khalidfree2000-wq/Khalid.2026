@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mohasaba-cache-v3';
+const CACHE_NAME = 'mohasaba-cache-v5';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',

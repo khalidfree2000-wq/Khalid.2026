@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>محاسبة ألوان للدعاية</title>
 <link rel="manifest" id="manifestLink" href="manifest.json">
-<meta name="theme-color" content="#1C1B1A">
+<meta name="theme-color" content="#3A1F63">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,6 +17,7 @@
     --paper:#EFEDE6;
     --card:#FFFFFF;
     --ink:#1C1B1A;
+    --nav-bg: linear-gradient(160deg, #22285C 0%, #4A2170 55%, #7A1E63 100%);
     --ink-soft:#5A5852;
     --line:#DEDAD0;
     --stamp:#B23A2F;
@@ -39,7 +40,7 @@
   .app{display:flex;min-height:100vh;}
   .sidebar{
     width:220px;
-    background:var(--ink);
+    background:var(--nav-bg);
     color:#EFEDE6;
     flex-shrink:0;
     padding:20px 0;
@@ -134,7 +135,7 @@
 
   .mobile-topbar{
     display:none;position:fixed;top:0;right:0;left:0;height:56px;
-    background:var(--ink);color:#fff;align-items:center;justify-content:space-between;
+    background:var(--nav-bg);color:#fff;align-items:center;justify-content:space-between;
     padding:0 16px;z-index:998;font-size:15px;
   }
   .hamburger-btn{
@@ -343,15 +344,22 @@
       <div class="panel">
         <h2>تقرير مبيعات المنتجات</h2>
         <div class="row" style="margin-bottom:14px;"><button id="exportProductSalesPdfBtn">تصدير PDF</button></div>
-        <div class="table-scroll"><table id="productSalesTable" style="min-width:600px;"><thead><tr><th>اسم المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>الأرباح</th><th>التاريخ</th></tr></thead><tbody></tbody></table></div>
+        <div class="table-scroll"><table id="productSalesTable" style="min-width:660px;"><thead><tr><th>اسم المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>الإجمالي</th><th>الأرباح</th><th>التاريخ</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="productSalesEmpty" style="display:none;">لا توجد بيانات كافية بعد.</div>
       </div>
 
       <div class="panel">
         <h2>تقرير مبيعات المطبوعات</h2>
-        <div class="row" style="margin-bottom:14px;"><button id="exportMeterSalesPdfBtn">تصدير PDF</button></div>
+        <div class="row" style="align-items:flex-end;margin-bottom:14px;">
+          <div class="field" style="max-width:180px;">
+            <label>مصاريف أخرى (تُخصم من الأرباح)</label>
+            <input type="number" id="meterOtherExpenses" value="0" min="0" onchange="renderMeterSalesReport()">
+          </div>
+          <button id="exportMeterSalesPdfBtn">تصدير PDF</button>
+        </div>
         <div class="table-scroll"><table id="meterSalesTable" style="min-width:820px;"><thead><tr><th>الخامة</th><th>الطول</th><th>العرض</th><th>المساحة</th><th>العدد</th><th>سعر الشراء</th><th>سعر البيع</th><th>الإجمالي</th><th>الأرباح</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="meterSalesEmpty" style="display:none;">لا توجد بيانات كافية بعد.</div>
+        <div class="totals-box" id="meterSalesTotalsBox" style="margin-top:14px;margin-right:0;"></div>
       </div>
     </section>
 
@@ -373,15 +381,15 @@
 
       <div class="panel">
         <h2>أيقونة التطبيق</h2>
-        <p class="subtitle" style="margin-bottom:14px;">اختر صورة مربعة من جهازك لتكون أيقونة التطبيق.</p>
+        <p class="subtitle" style="margin-bottom:14px;">اختر صورة مربعة من جهازك لتغيير شكل الأيقونة داخل شريط المتصفح (لا تؤثر على أيقونة التطبيق المثبت على الشاشة الرئيسية — تلك تُغيَّر برفع صورة icon-192.png و icon-512.png على GitHub).</p>
         <div class="row" style="align-items:center;">
           <img id="iconPreview" src="icon-192.png" style="width:64px;height:64px;border-radius:14px;border:1px solid var(--line);object-fit:cover;">
           <input type="file" id="iconFileInput" accept="image/*" style="flex:2;">
         </div>
         <button class="btn-primary" id="applyIconBtn" style="margin-top:12px;">تحديث الأيقونة</button>
         <p class="subtitle" style="margin-top:12px;">
-          بعد التحديث: احذف اختصار التطبيق القديم من شاشتك الرئيسية (إن وجد) ثم أضِفه من جديد
-          (⋮ ← Add to Home screen) حتى تظهر الأيقونة الجديدة — المتصفح لا يحدّث الاختصارات المثبتة تلقائياً.
+          هذا التغيير فوري داخل التطبيق فقط. لتغيير الأيقونة التي تظهر على الشاشة الرئيسية بعد التثبيت،
+          استبدل ملفي icon-192.png و icon-512.png على GitHub بنفس الطريقة المعتادة.
         </p>
       </div>
 
@@ -1243,8 +1251,9 @@ function getProductSalesRows(){
         const product = products.find(x=>x.id===it.refId);
         const cost = product ? product.cost : 0;
         const qty = Number(it.qty)||0;
+        const total = qty * (Number(it.unitPrice)||0);
         const profit = (Number(it.unitPrice) - cost) * qty;
-        rows.push({name:it.name, qty, cost, price:it.unitPrice, profit, date:inv.date});
+        rows.push({name:it.name, qty, cost, price:it.unitPrice, total, profit, date:inv.date});
       }
     });
   });
@@ -1253,14 +1262,15 @@ function getProductSalesRows(){
 function renderProductSalesReport(){
   const rows = getProductSalesRows();
   document.querySelector('#productSalesTable tbody').innerHTML = rows.map(r=>`
-    <tr><td>${r.name}</td><td>${r.qty}</td><td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td><td>${fmt(r.profit)}</td><td>${r.date}</td></tr>
+    <tr><td>${r.name}</td><td>${r.qty}</td><td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td><td>${fmt(r.total)}</td><td>${fmt(r.profit)}</td><td>${r.date}</td></tr>
   `).join('');
   document.getElementById('productSalesEmpty').style.display = rows.length? 'none':'block';
 }
 function printProductSalesReport(){
   const rows = getProductSalesRows();
   if(rows.length===0){ alert('لا توجد بيانات لتصديرها.'); return; }
-  const rowsHtml = rows.map(r=>`<tr><td>${r.name}</td><td>${r.qty}</td><td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td><td>${fmt(r.profit)}</td><td>${r.date}</td></tr>`).join('');
+  const rowsHtml = rows.map(r=>`<tr><td>${r.name}</td><td>${r.qty}</td><td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td><td>${fmt(r.total)}</td><td>${fmt(r.profit)}</td><td>${r.date}</td></tr>`).join('');
+  const totalSales = rows.reduce((s,r)=>s+r.total,0);
   const totalProfit = rows.reduce((s,r)=>s+r.profit,0);
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
@@ -1273,12 +1283,14 @@ function printProductSalesReport(){
         <th style="text-align:right;padding:8px;">الكمية</th>
         <th style="text-align:right;padding:8px;">سعر الشراء</th>
         <th style="text-align:right;padding:8px;">سعر البيع</th>
+        <th style="text-align:right;padding:8px;">الإجمالي</th>
         <th style="text-align:right;padding:8px;">الأرباح</th>
         <th style="text-align:right;padding:8px;">التاريخ</th>
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
     <div style="max-width:300px;margin-right:auto;margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>إجمالي المبيعات</span><span>${fmt(totalSales)}</span></div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:bold;font-size:17px;border-top:2px solid #1C1B1A;"><span>إجمالي الأرباح</span><span>${fmt(totalProfit)}</span></div>
     </div>
   `;
@@ -1314,12 +1326,23 @@ function renderMeterSalesReport(){
     <tr><td>${r.name}</td><td>${r.height}</td><td>${r.width}</td><td>${r.area.toFixed(2)}</td><td>${r.count}</td><td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td><td>${fmt(r.total)}</td><td>${fmt(r.profit)}</td></tr>
   `).join('');
   document.getElementById('meterSalesEmpty').style.display = rows.length? 'none':'block';
+
+  const otherExpenses = Number(document.getElementById('meterOtherExpenses').value)||0;
+  const grossProfit = rows.reduce((s,r)=>s+r.profit,0);
+  const netProfit = grossProfit - otherExpenses;
+  document.getElementById('meterSalesTotalsBox').innerHTML = `
+    <div class="line"><span>إجمالي أرباح المطبوعات</span><span>${fmt(grossProfit)}</span></div>
+    <div class="line"><span>مصاريف أخرى</span><span>${fmt(otherExpenses)}</span></div>
+    <div class="line final"><span>صافي الأرباح</span><span>${fmt(netProfit)}</span></div>
+  `;
 }
 function printMeterSalesReport(){
   const rows = getMeterSalesRows();
   if(rows.length===0){ alert('لا توجد بيانات لتصديرها.'); return; }
   const rowsHtml = rows.map(r=>`<tr><td>${r.name}</td><td>${r.height}</td><td>${r.width}</td><td>${r.area.toFixed(2)}</td><td>${r.count}</td><td>${fmt(r.cost)}</td><td>${fmt(r.price)}</td><td>${fmt(r.total)}</td><td>${fmt(r.profit)}</td></tr>`).join('');
-  const totalProfit = rows.reduce((s,r)=>s+r.profit,0);
+  const otherExpenses = Number(document.getElementById('meterOtherExpenses').value)||0;
+  const grossProfit = rows.reduce((s,r)=>s+r.profit,0);
+  const netProfit = grossProfit - otherExpenses;
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
       <div><h2>${settings.officeName}</h2><p>${settings.phone||''} ${settings.address? '- '+settings.address:''}</p></div>
@@ -1340,7 +1363,9 @@ function printMeterSalesReport(){
       <tbody>${rowsHtml}</tbody>
     </table>
     <div style="max-width:300px;margin-right:auto;margin-top:20px;">
-      <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:bold;font-size:17px;border-top:2px solid #1C1B1A;"><span>إجمالي الأرباح</span><span>${fmt(totalProfit)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>إجمالي أرباح المطبوعات</span><span>${fmt(grossProfit)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>مصاريف أخرى</span><span>${fmt(otherExpenses)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:bold;font-size:17px;border-top:2px solid #1C1B1A;"><span>صافي الأرباح</span><span>${fmt(netProfit)}</span></div>
     </div>
   `;
   setTimeout(()=>{
@@ -1394,26 +1419,10 @@ function applyCustomIcon(dataUrl){
   document.getElementById('faviconLink').href = dataUrl;
   document.getElementById('appleTouchIconLink').href = dataUrl;
   document.getElementById('iconPreview').src = dataUrl;
-
-  const manifestObj = {
-    name: (settings.officeName || 'محاسبة') + ' - نظام المحاسبة',
-    short_name: settings.officeName || 'محاسبة',
-    start_url: './index.html',
-    scope: './',
-    display: 'standalone',
-    orientation: 'any',
-    background_color: '#EFEDE6',
-    theme_color: '#1C1B1A',
-    dir: 'rtl',
-    lang: 'ar',
-    icons: [
-      { src: dataUrl, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-      { src: dataUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifestObj)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  document.getElementById('manifestLink').href = url;
+  // Note: the installable app icon comes from the real manifest.json file
+  // (icon-192.png / icon-512.png) — intentionally not overridden here,
+  // because swapping the manifest link to a temporary blob URL makes
+  // Chrome/Android stop treating the site as installable.
 }
 
 document.getElementById('applyIconBtn').addEventListener('click', async ()=>{
