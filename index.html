@@ -90,6 +90,7 @@
   .btn-stamp{background:var(--stamp);color:#fff;border-color:var(--stamp);}
   .btn-stamp:hover{background:var(--stamp-dark);}
   .btn-danger-ghost{color:var(--danger);border-color:var(--danger-bg);background:var(--danger-bg);}
+  .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
   th{
     text-align:right;padding:9px 10px;color:var(--ink-soft);font-size:12px;
@@ -189,7 +190,7 @@
       <div class="cards" id="dashCards"></div>
       <div class="panel">
         <h2>آخر الفواتير</h2>
-        <table id="dashInvoicesTable"><thead><tr><th>رقم</th><th>العميل</th><th>التاريخ</th><th>الإجمالي</th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="dashInvoicesTable"><thead><tr><th>رقم</th><th>العميل</th><th>التاريخ</th><th>الإجمالي</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="dashInvoicesEmpty" style="display:none;">لا توجد فواتير بعد. ابدأ بإنشاء أول فاتورة من تبويب الفواتير.</div>
       </div>
     </section>
@@ -239,7 +240,7 @@
         <div class="row" style="margin-bottom:14px;">
           <button id="exportSalesPdfBtn">تصدير تقرير المبيعات كملف PDF</button>
         </div>
-        <table id="invoicesTable"><thead><tr><th>رقم</th><th>العميل</th><th>التاريخ</th><th>الإجمالي</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="invoicesTable"><thead><tr><th>رقم</th><th>العميل</th><th>التاريخ</th><th>الإجمالي</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="invoicesEmpty" style="display:none;">لا توجد فواتير محفوظة بعد.</div>
       </div>
     </section>
@@ -267,7 +268,7 @@
         <div class="row" style="margin-bottom:14px;">
           <button id="exportPurchasesPdfBtn">تصدير السجل كملف PDF</button>
         </div>
-        <table id="purchasesTable"><thead><tr><th>التاريخ</th><th>المورد</th><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="purchasesTable" style="min-width:680px;"><thead><tr><th>التاريخ</th><th>المورد</th><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="purchasesEmpty" style="display:none;">لا توجد مشتريات مسجلة بعد.</div>
       </div>
     </section>
@@ -291,7 +292,7 @@
 
       <div class="panel">
         <h2>قائمة المنتجات</h2>
-        <table id="productsTable"><thead><tr><th>اسم المنتج</th><th>سعر البيع</th><th>سعر التكلفة</th><th>المخزون</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="productsTable"><thead><tr><th>اسم المنتج</th><th>سعر البيع</th><th>سعر التكلفة</th><th>المخزون</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="productsEmpty" style="display:none;">لا توجد منتجات مضافة بعد.</div>
       </div>
     </section>
@@ -314,7 +315,7 @@
 
       <div class="panel">
         <h2>قائمة الخامات</h2>
-        <table id="meterTable"><thead><tr><th>الخامة</th><th>سعر بيع المتر</th><th>تكلفة الطباعة للمتر</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="meterTable"><thead><tr><th>الخامة</th><th>سعر بيع المتر</th><th>تكلفة الطباعة للمتر</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="meterEmpty" style="display:none;">لا توجد خامات مضافة بعد.</div>
       </div>
     </section>
@@ -328,28 +329,28 @@
         <h2>تقرير عام</h2>
         <div class="cards" id="reportCards"></div>
         <h2 style="margin-top:18px;">أفضل المنتجات مبيعاً</h2>
-        <table id="topProductsTable"><thead><tr><th>الصنف</th><th>عدد مرات البيع</th><th>إجمالي المبيعات</th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="topProductsTable"><thead><tr><th>الصنف</th><th>عدد مرات البيع</th><th>إجمالي المبيعات</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="topProductsEmpty" style="display:none;">لا توجد بيانات كافية بعد.</div>
       </div>
 
       <div class="panel">
         <h2>تقرير المشتريات</h2>
         <div class="row" style="margin-bottom:14px;"><button id="exportPurchasesDetailPdfBtn">تصدير PDF</button></div>
-        <table id="purchasesDetailTable"><thead><tr><th>اسم المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>التاريخ</th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="purchasesDetailTable" style="min-width:560px;"><thead><tr><th>اسم المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>التاريخ</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="purchasesDetailEmpty" style="display:none;">لا توجد بيانات كافية بعد.</div>
       </div>
 
       <div class="panel">
         <h2>تقرير مبيعات المنتجات</h2>
         <div class="row" style="margin-bottom:14px;"><button id="exportProductSalesPdfBtn">تصدير PDF</button></div>
-        <table id="productSalesTable"><thead><tr><th>اسم المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>الأرباح</th><th>التاريخ</th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="productSalesTable" style="min-width:600px;"><thead><tr><th>اسم المنتج</th><th>الكمية</th><th>سعر الشراء</th><th>سعر البيع</th><th>الأرباح</th><th>التاريخ</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="productSalesEmpty" style="display:none;">لا توجد بيانات كافية بعد.</div>
       </div>
 
       <div class="panel">
         <h2>تقرير مبيعات المطبوعات</h2>
         <div class="row" style="margin-bottom:14px;"><button id="exportMeterSalesPdfBtn">تصدير PDF</button></div>
-        <table id="meterSalesTable"><thead><tr><th>الخامة</th><th>الطول</th><th>العرض</th><th>المساحة</th><th>العدد</th><th>سعر الشراء</th><th>سعر البيع</th><th>الإجمالي</th><th>الأرباح</th></tr></thead><tbody></tbody></table>
+        <div class="table-scroll"><table id="meterSalesTable" style="min-width:820px;"><thead><tr><th>الخامة</th><th>الطول</th><th>العرض</th><th>المساحة</th><th>العدد</th><th>سعر الشراء</th><th>سعر البيع</th><th>الإجمالي</th><th>الأرباح</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="meterSalesEmpty" style="display:none;">لا توجد بيانات كافية بعد.</div>
       </div>
     </section>
