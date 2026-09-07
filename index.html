@@ -959,7 +959,7 @@ function printInvoice(inv){
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="${settings.customIcon || 'icon-192.png'}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+        <img src="${settings.customIcon || 'icon-192.png'}" style="width:80px;height:80px;border-radius:14px;object-fit:cover;">
         <div><h2>${settings.officeName}</h2><p>${settings.phone||''} ${settings.address? '- '+settings.address:''}</p></div>
       </div>
       <div style="text-align:left;"><h2>فاتورة #${inv.number}</h2><p>${inv.date}</p></div>
@@ -995,7 +995,7 @@ function printPurchasesReport(){
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="${settings.customIcon || 'icon-192.png'}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+        <img src="${settings.customIcon || 'icon-192.png'}" style="width:80px;height:80px;border-radius:14px;object-fit:cover;">
         <div><h2>${settings.officeName}</h2><p>${settings.phone||''} ${settings.address? '- '+settings.address:''}</p></div>
       </div>
       <div style="text-align:left;"><h2>تقرير المشتريات</h2><p>${todayStr()}</p></div>
@@ -1040,7 +1040,7 @@ function printSalesReport(){
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="${settings.customIcon || 'icon-192.png'}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+        <img src="${settings.customIcon || 'icon-192.png'}" style="width:80px;height:80px;border-radius:14px;object-fit:cover;">
         <div><h2>${settings.officeName}</h2><p>${settings.phone||''} ${settings.address? '- '+settings.address:''}</p></div>
       </div>
       <div style="text-align:left;"><h2>تقرير المبيعات</h2><p>${todayStr()}</p></div>
@@ -1359,7 +1359,7 @@ function printPurchasesDetailReport(){
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="${settings.customIcon || 'icon-192.png'}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+        <img src="${settings.customIcon || 'icon-192.png'}" style="width:80px;height:80px;border-radius:14px;object-fit:cover;">
         <div><h2>${settings.officeName}</h2><p>${settings.phone||''} ${settings.address? '- '+settings.address:''}</p></div>
       </div>
       <div style="text-align:left;"><h2>تقرير المشتريات</h2><p>${todayStr()}</p></div>
@@ -1417,7 +1417,7 @@ function printProductSalesReport(){
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="${settings.customIcon || 'icon-192.png'}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+        <img src="${settings.customIcon || 'icon-192.png'}" style="width:80px;height:80px;border-radius:14px;object-fit:cover;">
         <div><h2>${settings.officeName}</h2><p>${settings.phone||''} ${settings.address? '- '+settings.address:''}</p></div>
       </div>
       <div style="text-align:left;"><h2>تقرير مبيعات المنتجات</h2><p>${todayStr()}</p></div>
@@ -1491,7 +1491,7 @@ function printMeterSalesReport(){
   document.getElementById('printArea').innerHTML = `
     <div class="invoice-head">
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="${settings.customIcon || 'icon-192.png'}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+        <img src="${settings.customIcon || 'icon-192.png'}" style="width:80px;height:80px;border-radius:14px;object-fit:cover;">
         <div><h2>${settings.officeName}</h2><p>${settings.phone||''} ${settings.address? '- '+settings.address:''}</p></div>
       </div>
       <div style="text-align:left;"><h2>تقرير مبيعات المطبوعات</h2><p>${todayStr()}</p></div>
