@@ -394,6 +394,17 @@
       </div>
 
       <div class="panel">
+        <h2>المزامنة السحابية</h2>
+        <p class="subtitle" style="margin-bottom:14px;">
+          البرنامج يتزامن تلقائياً بين كل الأجهزة اللي تفتح نفس الرابط (الجوال والكمبيوتر) عبر الإنترنت — بدون الحاجة لنفس شبكة الواي فاي.
+        </p>
+        <div class="row" style="align-items:center;">
+          <button class="btn-primary" id="fbManualSyncBtn">مزامنة الآن</button>
+          <span id="fbSyncStatus" style="font-size:13px;color:var(--ink-soft);">جارٍ التحقق...</span>
+        </div>
+      </div>
+
+      <div class="panel">
         <h2>النسخ الاحتياطي</h2>
         <p class="subtitle" style="margin-bottom:16px;">احفظ نسخة من كل بياناتك (الفواتير، المشتريات، المنتجات) في ملف على جهازك، أو استرجعها لاحقاً أو على جهاز آخر.</p>
         <div class="row" style="align-items:center;">
@@ -411,8 +422,122 @@
 <!-- PRINT AREA -->
 <div class="print-area" id="printArea"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
 const STORAGE_PREFIX = 'mohasaba_';
+
+/* ---------- CLOUD SYNC (Firebase) ---------- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDaCkqem2gXzgP-W8NvzkTe_D7JBIGO0Gs",
+  authDomain: "alwan-mohasaba.firebaseapp.com",
+  projectId: "alwan-mohasaba",
+  storageBucket: "alwan-mohasaba.firebasestorage.app",
+  messagingSenderId: "347225260547",
+  appId: "1:347225260547:web:0a81a8790c6e267f768436"
+};
+const SYNC_CODE = "alwan-dawaya-2026-sync-x7f3q9k1";
+const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter'];
+
+let fbDb = null;
+let fbSyncEnabled = false;
+let fbPushTimer = null;
+
+function setSyncStatus(text){
+  const el = document.getElementById('fbSyncStatus');
+  if(el) el.textContent = text;
+}
+
+function fbDocRef(){
+  return fbDb.collection('mohasaba_sync').doc(SYNC_CODE);
+}
+
+function settingsForSync(){
+  return settings; // settings holds no secrets, safe to sync as-is
+}
+
+async function pushToCloud(){
+  if(!fbSyncEnabled || !fbDb) return;
+  try{
+    await fbDocRef().set({
+      products, meterTypes, purchases, invoices,
+      settings: settingsForSync(), invoiceCounter,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+    setSyncStatus('متصل ✅ (آخر رفع: ' + new Date().toLocaleTimeString('ar') + ')');
+  }catch(e){
+    console.error('cloud push failed', e);
+    setSyncStatus('تعذر رفع آخر تحديث للسحابة، تحقق من الإنترنت');
+  }
+}
+
+async function applyIncomingCloudData(data){
+  if(data.products) products = data.products;
+  if(data.meterTypes) meterTypes = data.meterTypes;
+  if(data.purchases) purchases = data.purchases;
+  if(data.invoices) invoices = data.invoices;
+  if(data.settings) settings = data.settings;
+  if(typeof data.invoiceCounter === 'number') invoiceCounter = data.invoiceCounter;
+
+  // refresh local offline cache directly (bypasses Store.set to avoid re-triggering a cloud push)
+  try{
+    localStorage.setItem(STORAGE_PREFIX + 'products', JSON.stringify(products));
+    localStorage.setItem(STORAGE_PREFIX + 'meterTypes', JSON.stringify(meterTypes));
+    localStorage.setItem(STORAGE_PREFIX + 'purchases', JSON.stringify(purchases));
+    localStorage.setItem(STORAGE_PREFIX + 'invoices', JSON.stringify(invoices));
+    localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
+    localStorage.setItem(STORAGE_PREFIX + 'invoiceCounter', JSON.stringify(invoiceCounter));
+  }catch(e){ console.error(e); }
+
+  document.getElementById('setOfficeName').value = settings.officeName || '';
+  document.getElementById('setPhone').value = settings.phone || '';
+  document.getElementById('setAddress').value = settings.address || '';
+  document.getElementById('setCurrency').value = settings.currency || 'ر.س';
+
+  renderDashboard();
+  renderInvoiceItemsUI();
+  renderInvoicesTable();
+  renderPurchasesTable();
+  renderProductsTable();
+  renderMeterTable();
+  updateInvoiceNumberBadge();
+  if(document.getElementById('tab-reports').style.display !== 'none'){
+    renderReports();
+    renderPurchasesDetailReport();
+    renderProductSalesReport();
+    renderMeterSalesReport();
+  }
+}
+
+function startRealtimeSync(){
+  fbDocRef().onSnapshot((doc)=>{
+    if(doc.metadata.hasPendingWrites) return; // this is the echo of our own write, already applied locally
+    if(!doc.exists){ setSyncStatus('متصل ✅ (بانتظار أول رفع بيانات)'); return; }
+    applyIncomingCloudData(doc.data());
+    setSyncStatus('متصل ✅ (آخر تحديث: ' + new Date().toLocaleTimeString('ar') + ')');
+  }, (err)=>{
+    console.error('sync listener error', err);
+    setSyncStatus('تعذر الاتصال بالمزامنة (تحقق من الإنترنت وقاعدة الأمان)');
+  });
+}
+
+function initCloudSync(){
+  if(typeof firebase === 'undefined'){
+    setSyncStatus('تعذر تحميل مكتبة المزامنة (تحقق من الإنترنت)');
+    return;
+  }
+  try{
+    if(!firebase.apps.length){ firebase.initializeApp(FIREBASE_CONFIG); }
+    fbDb = firebase.firestore();
+    fbSyncEnabled = true;
+    setSyncStatus('جارٍ الاتصال...');
+    startRealtimeSync();
+  }catch(e){
+    console.error('firebase init failed', e);
+    setSyncStatus('تعذر تفعيل المزامنة');
+  }
+}
+
 const Store = {
   async get(key, fallback){
     try{
@@ -423,6 +548,11 @@ const Store = {
   async set(key, value){
     try{ localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); }
     catch(e){ console.error('storage error', e); alert('تعذر حفظ البيانات على هذا الجهاز. تأكد من توفر مساحة تخزين كافية.'); }
+
+    if(SYNC_KEYS.includes(key) && fbSyncEnabled){
+      clearTimeout(fbPushTimer);
+      fbPushTimer = setTimeout(()=>{ pushToCloud(); }, 400);
+    }
   }
 };
 
@@ -1389,6 +1519,12 @@ async function saveSettings(){
 }
 document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
 
+document.getElementById('fbManualSyncBtn').addEventListener('click', async ()=>{
+  if(!fbSyncEnabled){ setSyncStatus('المزامنة غير متصلة حالياً، تحقق من الإنترنت'); return; }
+  setSyncStatus('جارٍ الرفع...');
+  await pushToCloud();
+});
+
 /* ---------- CUSTOM APP ICON ---------- */
 function fileToIconDataUrl(file){
   return new Promise((resolve, reject)=>{
@@ -1520,6 +1656,7 @@ async function init(){
   renderProductsTable();
   renderMeterTable();
   updateInvoiceNumberBadge();
+  initCloudSync();
 }
 init();
 

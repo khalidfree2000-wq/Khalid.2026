@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mohasaba-cache-v5';
+const CACHE_NAME = 'mohasaba-cache-v6';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -24,6 +24,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  // Let all cross-origin requests (Firebase/Firestore, gstatic CDN, etc.) pass through
+  // untouched — intercepting their streaming/long-polling connections breaks realtime sync.
+  if (url.origin !== self.location.origin) return;
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((response) => {
