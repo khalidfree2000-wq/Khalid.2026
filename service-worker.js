@@ -1,9 +1,11 @@
-const CACHE_NAME = 'mohasaba-cache-v9';
+const CACHE_NAME = 'mohasaba-cache-v11';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './qr-code.png',
+  './invoice-logo.png'
 ];
 
 self.addEventListener('install', (event) => {
