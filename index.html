@@ -158,6 +158,16 @@
 </style>
 </head>
 <body>
+<div id="lockScreen" class="no-print" style="position:fixed;inset:0;background:var(--paper);z-index:2000;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+  <img src="icon-192.png" style="width:70px;height:70px;border-radius:16px;margin-bottom:16px;">
+  <h2 id="lockTitle" style="margin-bottom:4px;">أدخل رمز الدخول</h2>
+  <p id="lockSubtitle" class="subtitle" style="margin-bottom:16px;text-align:center;"></p>
+  <input type="password" id="lockPinInput" inputmode="numeric" maxlength="8" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:8px;" placeholder="••••">
+  <input type="password" id="lockPinConfirm" inputmode="numeric" maxlength="8" style="max-width:200px;text-align:center;font-size:22px;letter-spacing:8px;margin-top:10px;display:none;" placeholder="تأكيد الرمز">
+  <button class="btn-primary" id="lockSubmitBtn" style="margin-top:16px;width:200px;">دخول</button>
+  <p id="lockError" style="color:var(--danger);font-size:13px;margin-top:10px;display:none;"></p>
+</div>
+
 <div class="app">
 
   <div class="mobile-topbar no-print">
@@ -177,6 +187,7 @@
     <div class="nav-item" data-tab="purchases">المشتريات</div>
     <div class="nav-item" data-tab="products">قسم المنتجات</div>
     <div class="nav-item" data-tab="meter">قسم المطبوعات</div>
+    <div class="nav-item" data-tab="customers">العملاء</div>
     <div class="nav-item" data-tab="reports">التقارير</div>
     <div class="nav-item" data-tab="settings">الإعدادات</div>
   </div>
@@ -189,6 +200,14 @@
       <h1>لوحة المتابعة</h1>
       <p class="subtitle" id="todayDate"></p>
       <div class="cards" id="dashCards"></div>
+      <div class="panel" id="lowStockPanel" style="display:none;border-color:var(--danger-bg);background:var(--danger-bg);">
+        <h2 style="color:var(--danger);">⚠ منتجات على وشك النفاد</h2>
+        <div id="lowStockList"></div>
+      </div>
+      <div class="panel">
+        <h2>مبيعات آخر 7 أيام</h2>
+        <div id="salesChart"></div>
+      </div>
       <div class="panel">
         <h2>آخر الفواتير</h2>
         <div class="table-scroll"><table id="dashInvoicesTable"><thead><tr><th>رقم</th><th>الأخ/الأخوة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead><tbody></tbody></table></div>
@@ -206,7 +225,8 @@
         <div class="row">
           <div class="field">
             <label>اسم الأخ/الأخوة</label>
-            <input type="text" id="custName" placeholder="اسم الأخ/الأخوة أو الجهة">
+            <input type="text" id="custName" list="customersDatalist" placeholder="اسم الأخ/الأخوة أو الجهة">
+            <datalist id="customersDatalist"></datalist>
           </div>
           <div class="field">
             <label>التاريخ</label>
@@ -321,10 +341,49 @@
       </div>
     </section>
 
+    <!-- CUSTOMERS -->
+    <section id="tab-customers" style="display:none;">
+      <h1>العملاء</h1>
+      <p class="subtitle">قائمة عملائك — تُستخدم لاقتراح الأسماء تلقائياً عند إنشاء فاتورة جديدة</p>
+
+      <div class="panel">
+        <h2>إضافة عميل</h2>
+        <div class="row">
+          <div class="field"><label>الاسم</label><input type="text" id="custFormName" placeholder="اسم الأخ/الأخوة أو الجهة"></div>
+          <div class="field" style="max-width:200px;"><label>رقم الجوال (اختياري)</label><input type="text" id="custFormPhone" placeholder="05xxxxxxxx"></div>
+        </div>
+        <button class="btn-primary" id="addCustomerBtn">حفظ العميل</button>
+        <button id="cancelCustomerEditBtn" style="display:none;">إلغاء التعديل</button>
+      </div>
+
+      <div class="panel">
+        <h2>قائمة العملاء</h2>
+        <div class="table-scroll"><table id="customersTable"><thead><tr><th>الاسم</th><th>الجوال</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="customersEmpty" style="display:none;">لا يوجد عملاء مضافون بعد — سيُضافون تلقائياً من أسماء الفواتير أيضاً.</div>
+      </div>
+
+      <div class="panel" id="customerHistoryPanel" style="display:none;">
+        <h2 id="customerHistoryTitle">سجل فواتير العميل</h2>
+        <div class="table-scroll"><table id="customerHistoryTable"><thead><tr><th>رقم</th><th>التاريخ</th><th>الإجمالي</th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="customerHistoryEmpty" style="display:none;">لا توجد فواتير سابقة لهذا العميل.</div>
+      </div>
+    </section>
+
     <!-- REPORTS -->
     <section id="tab-reports" style="display:none;">
       <h1>التقارير</h1>
       <p class="subtitle">ملخص مالي عام لجميع العمليات المسجلة</p>
+
+      <div class="panel">
+        <h2>تصفية حسب التاريخ</h2>
+        <p class="subtitle" style="margin-bottom:12px;">تنطبق على كل التقارير أدناه بما فيها ملفات PDF المصدَّرة. اتركهما فارغين لعرض كل البيانات.</p>
+        <div class="row" style="align-items:flex-end;">
+          <div class="field" style="max-width:170px;"><label>من تاريخ</label><input type="date" id="reportFromDate"></div>
+          <div class="field" style="max-width:170px;"><label>إلى تاريخ</label><input type="date" id="reportToDate"></div>
+          <button class="btn-primary" id="applyReportFilterBtn">تطبيق الفلتر</button>
+          <button id="clearReportFilterBtn">إلغاء الفلتر</button>
+        </div>
+      </div>
 
       <div class="panel">
         <h2>تقرير عام</h2>
@@ -376,8 +435,15 @@
         </div>
         <div class="row">
           <div class="field"><label>العنوان</label><input type="text" id="setAddress" placeholder="المدينة - الحي - الشارع"></div>
+          <div class="field" style="max-width:180px;"><label>حد تنبيه نقص المخزون</label><input type="number" id="setLowStockThreshold" value="5" min="0"></div>
         </div>
         <button class="btn-primary" id="saveSettingsBtn">حفظ الإعدادات</button>
+      </div>
+
+      <div class="panel">
+        <h2>الأمان</h2>
+        <p class="subtitle" style="margin-bottom:14px;">رمز الدخول يحمي بيانات مكتبك من أي شخص آخر يفتح نفس رابط البرنامج.</p>
+        <button class="btn-primary" id="changePinBtn">تغيير رمز الدخول</button>
       </div>
 
       <div class="panel">
@@ -438,7 +504,7 @@ const FIREBASE_CONFIG = {
   appId: "1:347225260547:web:0a81a8790c6e267f768436"
 };
 const SYNC_CODE = "alwan-dawaya-2026-sync-x7f3q9k1";
-const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter'];
+const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers'];
 
 let fbDb = null;
 let fbSyncEnabled = false;
@@ -461,7 +527,7 @@ async function pushToCloud(){
   if(!fbSyncEnabled || !fbDb) return;
   try{
     await fbDocRef().set({
-      products, meterTypes, purchases, invoices,
+      products, meterTypes, purchases, invoices, customers,
       settings: settingsForSync(), invoiceCounter,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -477,6 +543,7 @@ async function applyIncomingCloudData(data){
   if(data.meterTypes) meterTypes = data.meterTypes;
   if(data.purchases) purchases = data.purchases;
   if(data.invoices) invoices = data.invoices;
+  if(data.customers) customers = data.customers;
   if(data.settings) settings = data.settings;
   if(typeof data.invoiceCounter === 'number') invoiceCounter = data.invoiceCounter;
 
@@ -486,6 +553,7 @@ async function applyIncomingCloudData(data){
     localStorage.setItem(STORAGE_PREFIX + 'meterTypes', JSON.stringify(meterTypes));
     localStorage.setItem(STORAGE_PREFIX + 'purchases', JSON.stringify(purchases));
     localStorage.setItem(STORAGE_PREFIX + 'invoices', JSON.stringify(invoices));
+    localStorage.setItem(STORAGE_PREFIX + 'customers', JSON.stringify(customers));
     localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
     localStorage.setItem(STORAGE_PREFIX + 'invoiceCounter', JSON.stringify(invoiceCounter));
   }catch(e){ console.error(e); }
@@ -494,6 +562,7 @@ async function applyIncomingCloudData(data){
   document.getElementById('setPhone').value = settings.phone || '';
   document.getElementById('setAddress').value = settings.address || '';
   document.getElementById('setCurrency').value = settings.currency || 'ر.س';
+  document.getElementById('setLowStockThreshold').value = (typeof settings.lowStockThreshold === 'number') ? settings.lowStockThreshold : 5;
 
   renderDashboard();
   renderInvoiceItemsUI();
@@ -501,6 +570,8 @@ async function applyIncomingCloudData(data){
   renderPurchasesTable();
   renderProductsTable();
   renderMeterTable();
+  renderCustomersTable();
+  updateCustomersDatalist();
   updateInvoiceNumberBadge();
   if(document.getElementById('tab-reports').style.display !== 'none'){
     renderReports();
@@ -561,6 +632,7 @@ let products = [];
 let meterTypes = [];
 let purchases = [];
 let invoices = [];
+let customers = [];
 let settings = { officeName: 'ألوان للدعاية', phone: '', address: '', currency: 'ر.س' };
 let invoiceCounter = 1;
 
@@ -579,6 +651,7 @@ async function loadAll(){
   meterTypes = await Store.get('meterTypes', []);
   purchases = await Store.get('purchases', []);
   invoices = await Store.get('invoices', []);
+  customers = await Store.get('customers', []);
   settings = await Store.get('settings', settings);
   invoiceCounter = await Store.get('invoiceCounter', 1);
 
@@ -706,6 +779,49 @@ function renderDashboard(){
     <tr><td>#${i.number}</td><td>${i.customer||'-'}</td><td>${i.date}</td><td>${fmt(i.total)}</td></tr>
   `).join('');
   document.getElementById('dashInvoicesEmpty').style.display = recent.length? 'none':'block';
+
+  renderLowStockAlert();
+  renderSalesChart();
+}
+
+function renderLowStockAlert(){
+  const threshold = (typeof settings.lowStockThreshold === 'number') ? settings.lowStockThreshold : 5;
+  const lowStock = products.filter(p=>(p.stock||0) <= threshold);
+  const panel = document.getElementById('lowStockPanel');
+  if(lowStock.length === 0){
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+  document.getElementById('lowStockList').innerHTML = lowStock.map(p=>`
+    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px;">
+      <span>${p.name}</span><span style="font-weight:bold;color:var(--danger);">متبقي: ${p.stock||0}</span>
+    </div>
+  `).join('');
+}
+
+function renderSalesChart(){
+  const days = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    const key = d.toISOString().slice(0,10);
+    const total = invoices.filter(inv=>inv.date===key).reduce((s,inv)=>s+inv.total,0);
+    days.push({label: d.toLocaleDateString('ar-EG',{weekday:'short'}), total});
+  }
+  const maxVal = Math.max(...days.map(d=>d.total), 1);
+  const barWidth = 36, gap = 16, chartHeight = 110;
+  const svgWidth = days.length*(barWidth+gap);
+  let bars = '';
+  days.forEach((d,i)=>{
+    const h = Math.max(2, Math.round((d.total/maxVal)*chartHeight));
+    const x = i*(barWidth+gap);
+    const y = chartHeight - h;
+    bars += `<rect x="${x}" y="${y}" width="${barWidth}" height="${h}" rx="5" fill="#7A1E63"></rect>`;
+    bars += `<text x="${x+barWidth/2}" y="${chartHeight+18}" text-anchor="middle" font-size="11" fill="#5A5852">${d.label}</text>`;
+  });
+  document.getElementById('salesChart').innerHTML =
+    `<svg viewBox="0 0 ${svgWidth} ${chartHeight+28}" style="width:100%;max-width:420px;height:auto;display:block;margin:0 auto;">${bars}</svg>`;
 }
 
 /* ---------- INVOICE BUILDER ---------- */
@@ -849,6 +965,8 @@ async function saveInvoice(){
     await Store.set('invoiceCounter', invoiceCounter);
   }
   deductStock(currentInvoiceItems);
+  findOrCreateCustomerByName(customer);
+  await Store.set('customers', customers);
   await Store.set('products', products);
   await Store.set('invoices', invoices);
 
@@ -859,6 +977,8 @@ async function saveInvoice(){
   renderInvoiceItemsUI();
   renderInvoicesTable();
   renderProductsTable();
+  renderCustomersTable();
+  updateCustomersDatalist();
   updateInvoiceNumberBadge();
   printInvoice(invoice);
 }
@@ -929,6 +1049,23 @@ function updateInvoiceNumberBadge(){
   document.getElementById('invNumberBadge').textContent = '#' + invoiceCounter;
 }
 
+function shareInvoiceWhatsapp(number){
+  const inv = invoices.find(i=>i.number===number);
+  if(!inv) return;
+  const customer = customers.find(c=>c.name.trim().toLowerCase()===inv.customer.trim().toLowerCase());
+  const itemsSummary = inv.items.map(it=>{
+    if(it.type==='product') return `${it.name} × ${it.qty}`;
+    const area = (Number(it.width)||0)*(Number(it.height)||0)*(Number(it.qty)||1);
+    return `${it.name} (${area.toFixed(2)} م²)`;
+  }).join('، ');
+  const text = `${settings.officeName}\nفاتورة رقم #${inv.number}\nالتاريخ: ${inv.date}\nالأخ/الأخوة: ${inv.customer}\nالأصناف: ${itemsSummary}\nالإجمالي: ${fmt(inv.total)}\n\nشكراً لتعاملكم معنا 🌸`;
+  const phoneDigits = customer && customer.phone ? customer.phone.replace(/[^0-9]/g,'') : '';
+  const url = phoneDigits
+    ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+}
+
 function renderInvoicesTable(){
   const tbody = document.querySelector('#invoicesTable tbody');
   const sorted = [...invoices].sort((a,b)=>b.number-a.number);
@@ -937,6 +1074,7 @@ function renderInvoicesTable(){
       <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
       <td>
         <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')})">طباعة</button>
+        <button style="color:#25D366;" onclick="shareInvoiceWhatsapp(${i.number})" title="مشاركة عبر واتساب">واتساب</button>
         <button class="icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل">✎</button>
         <button class="icon-btn" onclick="deleteInvoice(${i.number})" title="حذف">✕</button>
       </td>
@@ -1253,6 +1391,101 @@ function renderProductsTable(){
   document.getElementById('productsEmpty').style.display = products.length? 'none':'block';
 }
 
+/* ---------- CUSTOMERS ---------- */
+let editingCustomerId = null;
+
+function findOrCreateCustomerByName(name){
+  const norm = name.trim().toLowerCase();
+  if(!norm) return null;
+  let c = customers.find(x=>x.name.trim().toLowerCase()===norm);
+  if(!c){
+    c = {id:uid(), name:name.trim(), phone:''};
+    customers.push(c);
+  }
+  return c;
+}
+
+async function addCustomer(){
+  const name = document.getElementById('custFormName').value.trim();
+  const phone = document.getElementById('custFormPhone').value.trim();
+  if(!name){ alert('أدخل اسم العميل.'); return; }
+
+  if(editingCustomerId){
+    const c = customers.find(x=>x.id===editingCustomerId);
+    if(c){ c.name=name; c.phone=phone; }
+    editingCustomerId = null;
+    document.getElementById('addCustomerBtn').textContent = 'حفظ العميل';
+    document.getElementById('cancelCustomerEditBtn').style.display = 'none';
+  } else {
+    customers.push({id:uid(), name, phone});
+  }
+  await Store.set('customers', customers);
+  document.getElementById('custFormName').value='';
+  document.getElementById('custFormPhone').value='';
+  renderCustomersTable();
+  updateCustomersDatalist();
+}
+document.getElementById('addCustomerBtn').addEventListener('click', addCustomer);
+
+function editCustomer(id){
+  const c = customers.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('custFormName').value = c.name;
+  document.getElementById('custFormPhone').value = c.phone || '';
+  editingCustomerId = id;
+  document.getElementById('addCustomerBtn').textContent = 'تحديث العميل';
+  document.getElementById('cancelCustomerEditBtn').style.display = 'inline-block';
+  document.getElementById('custFormName').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelCustomerEdit(){
+  editingCustomerId = null;
+  document.getElementById('custFormName').value='';
+  document.getElementById('custFormPhone').value='';
+  document.getElementById('addCustomerBtn').textContent = 'حفظ العميل';
+  document.getElementById('cancelCustomerEditBtn').style.display = 'none';
+}
+document.getElementById('cancelCustomerEditBtn').addEventListener('click', cancelCustomerEdit);
+
+async function deleteCustomer(id){
+  if(!confirm('هل تريد حذف هذا العميل من القائمة؟ (فواتيره السابقة تبقى محفوظة)')) return;
+  customers = customers.filter(c=>c.id!==id);
+  await Store.set('customers', customers);
+  renderCustomersTable();
+  updateCustomersDatalist();
+}
+
+function showCustomerHistory(name){
+  const rows = invoices.filter(i=>i.customer.trim().toLowerCase()===name.trim().toLowerCase())
+    .sort((a,b)=>b.number-a.number);
+  document.getElementById('customerHistoryPanel').style.display = 'block';
+  document.getElementById('customerHistoryTitle').textContent = 'سجل فواتير: ' + name;
+  document.querySelector('#customerHistoryTable tbody').innerHTML = rows.map(i=>`
+    <tr><td>#${i.number}</td><td>${i.date}</td><td>${fmt(i.total)}</td></tr>
+  `).join('');
+  document.getElementById('customerHistoryEmpty').style.display = rows.length? 'none':'block';
+  document.getElementById('customerHistoryPanel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderCustomersTable(){
+  const tbody = document.querySelector('#customersTable tbody');
+  const sorted = [...customers].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  tbody.innerHTML = sorted.map(c=>`
+    <tr><td>${c.name}</td><td>${c.phone||'-'}</td>
+    <td>
+      <button onclick="showCustomerHistory('${c.name.replace(/'/g,"\\'")}')">السجل</button>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editCustomer('${c.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteCustomer('${c.id}')" title="حذف">✕</button>
+    </td></tr>
+  `).join('');
+  document.getElementById('customersEmpty').style.display = sorted.length? 'none':'block';
+}
+
+function updateCustomersDatalist(){
+  const dl = document.getElementById('customersDatalist');
+  dl.innerHTML = customers.map(c=>`<option value="${c.name}"></option>`).join('');
+}
+
 /* ---------- METER CATALOG ---------- */
 let editingMeterId = null;
 
@@ -1321,10 +1554,36 @@ function renderMeterTable(){
 }
 
 /* ---------- REPORTS ---------- */
+/* ---------- REPORT DATE FILTER ---------- */
+function inReportDateRange(dateStr){
+  const from = document.getElementById('reportFromDate').value;
+  const to = document.getElementById('reportToDate').value;
+  if(from && (dateStr||'') < from) return false;
+  if(to && (dateStr||'') > to) return false;
+  return true;
+}
+
+function renderAllReports(){
+  renderReports();
+  renderPurchasesDetailReport();
+  renderProductSalesReport();
+  renderMeterSalesReport();
+}
+
+document.getElementById('applyReportFilterBtn').addEventListener('click', renderAllReports);
+document.getElementById('clearReportFilterBtn').addEventListener('click', ()=>{
+  document.getElementById('reportFromDate').value = '';
+  document.getElementById('reportToDate').value = '';
+  renderAllReports();
+});
+
 function renderReports(){
-  const totalSales = invoices.reduce((s,i)=>s+i.total,0);
-  const totalPurchases = purchases.reduce((s,p)=>s+p.total,0);
-  const totalPrintCost = invoices.reduce((s,i)=>s+(i.printCost||0),0);
+  const filteredInvoices = invoices.filter(i=>inReportDateRange(i.date));
+  const filteredPurchases = purchases.filter(p=>inReportDateRange(p.date));
+
+  const totalSales = filteredInvoices.reduce((s,i)=>s+i.total,0);
+  const totalPurchases = filteredPurchases.reduce((s,p)=>s+p.total,0);
+  const totalPrintCost = filteredInvoices.reduce((s,i)=>s+(i.printCost||0),0);
   const netProfit = totalSales - totalPurchases - totalPrintCost;
 
   document.getElementById('reportCards').innerHTML = `
@@ -1335,7 +1594,7 @@ function renderReports(){
   `;
 
   const tally = {};
-  invoices.forEach(inv=>{
+  filteredInvoices.forEach(inv=>{
     inv.items.forEach(it=>{
       const key = it.name;
       if(!tally[key]) tally[key] = {count:0, total:0};
@@ -1357,7 +1616,7 @@ function renderReports(){
 
 /* ---------- DETAILED REPORT: PURCHASES ---------- */
 function getPurchasesDetailRows(){
-  return [...purchases].sort((a,b)=> (a.date||'').localeCompare(b.date||'')).map(p=>{
+  return [...purchases].filter(p=>inReportDateRange(p.date)).sort((a,b)=> (a.date||'').localeCompare(b.date||'')).map(p=>{
     const product = products.find(x=>x.name.trim().toLowerCase()===p.item.trim().toLowerCase());
     return { name:p.item, qty:p.qty, cost:p.unitCost, price: product? product.price : 0, date:p.date };
   });
@@ -1407,7 +1666,7 @@ document.getElementById('exportPurchasesDetailPdfBtn').addEventListener('click',
 /* ---------- DETAILED REPORT: PRODUCT SALES ---------- */
 function getProductSalesRows(){
   const rows = [];
-  invoices.forEach(inv=>{
+  invoices.filter(inv=>inReportDateRange(inv.date)).forEach(inv=>{
     inv.items.forEach(it=>{
       if(it.type==='product'){
         const product = products.find(x=>x.id===it.refId);
@@ -1481,7 +1740,7 @@ document.getElementById('exportProductSalesPdfBtn').addEventListener('click', pr
 /* ---------- DETAILED REPORT: PRINTOUT (METER) SALES ---------- */
 function getMeterSalesRows(){
   const rows = [];
-  invoices.forEach(inv=>{
+  invoices.filter(inv=>inReportDateRange(inv.date)).forEach(inv=>{
     inv.items.forEach(it=>{
       if(it.type==='meter'){
         const width = Number(it.width)||0, height = Number(it.height)||0, count = Number(it.qty)||1;
@@ -1559,16 +1818,88 @@ function printMeterSalesReport(){
 document.getElementById('exportMeterSalesPdfBtn').addEventListener('click', printMeterSalesReport);
 
 /* ---------- SETTINGS ---------- */
+/* ---------- LOCK SCREEN (PIN protection) ---------- */
+async function sha256Hex(text){
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+let lockMode = 'enter';
+
+function showLockError(msg){
+  const el = document.getElementById('lockError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function setupLockScreen(){
+  const hasPin = !!settings.pinHash;
+  lockMode = hasPin ? 'enter' : 'create';
+  document.getElementById('lockTitle').textContent = hasPin ? 'أدخل رمز الدخول' : 'أنشئ رمز دخول جديد';
+  document.getElementById('lockSubtitle').textContent = hasPin
+    ? 'لحماية بيانات المكتب'
+    : 'اختر رمز من 4 أرقام على الأقل لحماية بياناتك من أي شخص آخر يفتح نفس الرابط';
+  document.getElementById('lockPinConfirm').style.display = hasPin ? 'none' : 'block';
+  document.getElementById('lockPinInput').value = '';
+  document.getElementById('lockPinConfirm').value = '';
+  document.getElementById('lockError').style.display = 'none';
+}
+
+async function attemptUnlock(){
+  const pin = document.getElementById('lockPinInput').value.trim();
+  document.getElementById('lockError').style.display = 'none';
+  if(pin.length < 4){ showLockError('الرمز يجب أن يكون 4 أرقام على الأقل'); return; }
+
+  if(lockMode === 'create'){
+    const confirmPin = document.getElementById('lockPinConfirm').value.trim();
+    if(pin !== confirmPin){ showLockError('الرمزان غير متطابقين'); return; }
+    settings.pinHash = await sha256Hex(pin);
+    await Store.set('settings', settings);
+    unlockApp();
+  } else {
+    const hash = await sha256Hex(pin);
+    if(hash === settings.pinHash){
+      unlockApp();
+    } else {
+      showLockError('رمز غير صحيح');
+      document.getElementById('lockPinInput').value = '';
+    }
+  }
+}
+document.getElementById('lockSubmitBtn').addEventListener('click', attemptUnlock);
+document.getElementById('lockPinInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptUnlock(); });
+document.getElementById('lockPinConfirm').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptUnlock(); });
+
+function unlockApp(){
+  document.getElementById('lockScreen').style.display = 'none';
+  try{ sessionStorage.setItem('mohasaba_unlocked', '1'); }catch(e){}
+}
+
+async function changePin(){
+  const p1 = prompt('أدخل رمز الدخول الجديد (4 أرقام على الأقل):');
+  if(p1===null) return;
+  if(p1.trim().length < 4){ alert('الرمز قصير جداً، لازم 4 أرقام على الأقل.'); return; }
+  const p2 = prompt('أعد كتابة الرمز الجديد للتأكيد:');
+  if(p2===null) return;
+  if(p1.trim() !== p2.trim()){ alert('الرمزان غير متطابقين.'); return; }
+  settings.pinHash = await sha256Hex(p1.trim());
+  await Store.set('settings', settings);
+  alert('تم تحديث رمز الدخول بنجاح.');
+}
+
 async function saveSettings(){
   settings.officeName = document.getElementById('setOfficeName').value.trim() || 'مكتب الدعاية والإعلان';
   settings.phone = document.getElementById('setPhone').value.trim();
   settings.address = document.getElementById('setAddress').value.trim();
   settings.currency = document.getElementById('setCurrency').value.trim() || 'ر.س';
+  settings.lowStockThreshold = Number(document.getElementById('setLowStockThreshold').value) || 0;
   await Store.set('settings', settings);
   renderDashboard();
   alert('تم حفظ الإعدادات.');
 }
 document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+document.getElementById('changePinBtn').addEventListener('click', changePin);
 
 document.getElementById('fbManualSyncBtn').addEventListener('click', async ()=>{
   if(!fbSyncEnabled){ setSyncStatus('المزامنة غير متصلة حالياً، تحقق من الإنترنت'); return; }
@@ -1675,6 +2006,7 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
     document.getElementById('setPhone').value = settings.phone || '';
     document.getElementById('setAddress').value = settings.address || '';
     document.getElementById('setCurrency').value = settings.currency || 'ر.س';
+    document.getElementById('setLowStockThreshold').value = (typeof settings.lowStockThreshold === 'number') ? settings.lowStockThreshold : 5;
 
     renderDashboard();
     renderInvoiceItemsUI();
@@ -1697,8 +2029,17 @@ async function init(){
   document.getElementById('setPhone').value = settings.phone;
   document.getElementById('setAddress').value = settings.address;
   document.getElementById('setCurrency').value = settings.currency || 'ر.س';
+  document.getElementById('setLowStockThreshold').value = (typeof settings.lowStockThreshold === 'number') ? settings.lowStockThreshold : 5;
   document.getElementById('invDate').value = todayStr();
   if(settings.customIcon){ applyCustomIcon(settings.customIcon); }
+
+  let alreadyUnlocked = false;
+  try{ alreadyUnlocked = sessionStorage.getItem('mohasaba_unlocked') === '1'; }catch(e){}
+  if(alreadyUnlocked){
+    document.getElementById('lockScreen').style.display = 'none';
+  } else {
+    setupLockScreen();
+  }
 
   renderDashboard();
   renderInvoiceItemsUI();
@@ -1706,6 +2047,8 @@ async function init(){
   renderPurchasesTable();
   renderProductsTable();
   renderMeterTable();
+  renderCustomersTable();
+  updateCustomersDatalist();
   updateInvoiceNumberBadge();
   initCloudSync();
 }
