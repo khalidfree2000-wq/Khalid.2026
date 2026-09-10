@@ -187,6 +187,7 @@
     <div class="nav-item" data-tab="purchases">المشتريات</div>
     <div class="nav-item" data-tab="products">قسم المنتجات</div>
     <div class="nav-item" data-tab="meter">قسم المطبوعات</div>
+    <div class="nav-item" data-tab="expenses">المصروفات</div>
     <div class="nav-item" data-tab="customers">العملاء</div>
     <div class="nav-item" data-tab="reports">التقارير</div>
     <div class="nav-item" data-tab="settings">الإعدادات</div>
@@ -242,11 +243,12 @@
         </div>
 
         <div class="row">
-          <div class="field" style="max-width:180px;">
-            <label>الخصم (ر.س)</label>
-            <input type="number" id="invDiscount" value="0" min="0">
+          <div class="field" style="max-width:220px;">
+            <label>تكاليف/عمولات إضافية (ر.س)</label>
+            <input type="number" id="invExtraCost" value="0" min="0">
           </div>
         </div>
+        <p class="subtitle" style="margin-top:-6px;margin-bottom:14px;">مثل عمولة تركيب أو إيجار سيارة — تُخصم من أرباحك فقط في التقارير، ولا تظهر أو تُخصم من فاتورة العميل.</p>
 
         <div class="totals-box" id="invTotalsBox"></div>
 
@@ -338,6 +340,41 @@
         <h2>قائمة الخامات</h2>
         <div class="table-scroll"><table id="meterTable"><thead><tr><th>الخامة</th><th>سعر بيع المتر</th><th>تكلفة الطباعة للمتر</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="meterEmpty" style="display:none;">لا توجد خامات مضافة بعد.</div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section id="tab-expenses" style="display:none;">
+      <h1>المصروفات</h1>
+      <p class="subtitle">مصاريف تشغيل المكتب (أحبار، أوراق طباعة، آلات جديدة، صيانة، وغيرها) — منفصلة عن مشتريات المنتجات ولا تؤثر على المخزون</p>
+
+      <div class="panel">
+        <h2>إضافة مصروف</h2>
+        <div class="row">
+          <div class="field" style="max-width:180px;">
+            <label>الفئة</label>
+            <select id="expCategory">
+              <option>أحبار وخراطيش</option>
+              <option>أوراق طباعة</option>
+              <option>آلات ومعدات</option>
+              <option>صيانة</option>
+              <option>إيجار</option>
+              <option>أخرى</option>
+            </select>
+          </div>
+          <div class="field"><label>الوصف</label><input type="text" id="expDescription" placeholder="مثال: حبر طابعة كانفس"></div>
+          <div class="field" style="max-width:150px;"><label>المبلغ</label><input type="number" id="expAmount" value="0" min="0"></div>
+          <div class="field" style="max-width:160px;"><label>التاريخ</label><input type="date" id="expDate"></div>
+        </div>
+        <button class="btn-primary" id="addExpenseBtn">حفظ المصروف</button>
+        <button id="cancelExpenseEditBtn" style="display:none;">إلغاء التعديل</button>
+      </div>
+
+      <div class="panel">
+        <h2>سجل المصروفات</h2>
+        <div class="table-scroll"><table id="expensesTable"><thead><tr><th>التاريخ</th><th>الفئة</th><th>الوصف</th><th>المبلغ</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="expensesEmpty" style="display:none;">لا توجد مصروفات مسجلة بعد.</div>
+        <div class="totals-box" id="expensesTotalsBox" style="margin-top:14px;margin-right:0;"></div>
       </div>
     </section>
 
@@ -504,7 +541,7 @@ const FIREBASE_CONFIG = {
   appId: "1:347225260547:web:0a81a8790c6e267f768436"
 };
 const SYNC_CODE = "alwan-dawaya-2026-sync-x7f3q9k1";
-const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers'];
+const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers','expenses'];
 
 let fbDb = null;
 let fbSyncEnabled = false;
@@ -527,7 +564,7 @@ async function pushToCloud(){
   if(!fbSyncEnabled || !fbDb) return;
   try{
     await fbDocRef().set({
-      products, meterTypes, purchases, invoices, customers,
+      products, meterTypes, purchases, invoices, customers, expenses,
       settings: settingsForSync(), invoiceCounter,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -544,6 +581,7 @@ async function applyIncomingCloudData(data){
   if(data.purchases) purchases = data.purchases;
   if(data.invoices) invoices = data.invoices;
   if(data.customers) customers = data.customers;
+  if(data.expenses) expenses = data.expenses;
   if(data.settings) settings = data.settings;
   if(typeof data.invoiceCounter === 'number') invoiceCounter = data.invoiceCounter;
 
@@ -554,6 +592,7 @@ async function applyIncomingCloudData(data){
     localStorage.setItem(STORAGE_PREFIX + 'purchases', JSON.stringify(purchases));
     localStorage.setItem(STORAGE_PREFIX + 'invoices', JSON.stringify(invoices));
     localStorage.setItem(STORAGE_PREFIX + 'customers', JSON.stringify(customers));
+    localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
     localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
     localStorage.setItem(STORAGE_PREFIX + 'invoiceCounter', JSON.stringify(invoiceCounter));
   }catch(e){ console.error(e); }
@@ -572,6 +611,7 @@ async function applyIncomingCloudData(data){
   renderMeterTable();
   renderCustomersTable();
   updateCustomersDatalist();
+  renderExpensesTable();
   updateInvoiceNumberBadge();
   if(document.getElementById('tab-reports').style.display !== 'none'){
     renderReports();
@@ -633,6 +673,7 @@ let meterTypes = [];
 let purchases = [];
 let invoices = [];
 let customers = [];
+let expenses = [];
 let settings = { officeName: 'ألوان للدعاية', phone: '', address: '', currency: 'ر.س' };
 let invoiceCounter = 1;
 
@@ -652,6 +693,7 @@ async function loadAll(){
   purchases = await Store.get('purchases', []);
   invoices = await Store.get('invoices', []);
   customers = await Store.get('customers', []);
+  expenses = await Store.get('expenses', []);
   settings = await Store.get('settings', settings);
   invoiceCounter = await Store.get('invoiceCounter', 1);
 
@@ -914,9 +956,9 @@ function computeInvoiceTotals(){
       printCostTotal += area * count * (Number(it.printCost)||0);
     }
   });
-  const discount = Number(document.getElementById('invDiscount').value)||0;
-  const net = subtotal - discount;
-  return {subtotal, printCostTotal, discount, net};
+  const extraCost = Number(document.getElementById('invExtraCost').value)||0;
+  const net = subtotal; // customer-facing total is never reduced by extraCost
+  return {subtotal, printCostTotal, extraCost, net};
 }
 
 function renderInvoiceTotals(){
@@ -924,11 +966,10 @@ function renderInvoiceTotals(){
   document.getElementById('invTotalsBox').innerHTML = `
     <div class="line"><span>إجمالي الأصناف</span><span>${fmt(t.subtotal)}</span></div>
     <div class="line"><span>تكلفة الطباعة الخارجية</span><span>${fmt(t.printCostTotal)}</span></div>
-    <div class="line"><span>الخصم</span><span>${fmt(t.discount)}</span></div>
     <div class="line final"><span>الصافي المستحق</span><span>${fmt(t.net)}</span></div>
   `;
 }
-document.getElementById('invDiscount').addEventListener('input', renderInvoiceTotals);
+document.getElementById('invExtraCost').addEventListener('input', renderInvoiceTotals);
 
 let editingInvoiceNumber = null;
 
@@ -949,7 +990,7 @@ async function saveInvoice(){
     invoice.customer = customer;
     invoice.date = date;
     invoice.items = JSON.parse(JSON.stringify(currentInvoiceItems));
-    invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.discount = t.discount; invoice.total = t.net;
+    invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.extraCost = t.extraCost; invoice.total = t.net;
     editingInvoiceNumber = null;
     document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
     document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
@@ -958,7 +999,7 @@ async function saveInvoice(){
       number: invoiceCounter,
       customer, date,
       items: JSON.parse(JSON.stringify(currentInvoiceItems)),
-      subtotal: t.subtotal, printCost: t.printCostTotal, discount: t.discount, total: t.net
+      subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net
     };
     invoices.push(invoice);
     invoiceCounter += 1;
@@ -972,13 +1013,14 @@ async function saveInvoice(){
 
   currentInvoiceItems = [];
   document.getElementById('custName').value='';
-  document.getElementById('invDiscount').value=0;
+  document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
   renderInvoiceItemsUI();
   renderInvoicesTable();
   renderProductsTable();
   renderCustomersTable();
   updateCustomersDatalist();
+  renderExpensesTable();
   updateInvoiceNumberBadge();
   printInvoice(invoice);
 }
@@ -994,7 +1036,7 @@ async function editInvoice(number){
 
   document.getElementById('custName').value = inv.customer;
   document.getElementById('invDate').value = inv.date;
-  document.getElementById('invDiscount').value = inv.discount;
+  document.getElementById('invExtraCost').value = inv.extraCost || 0;
   currentInvoiceItems = JSON.parse(JSON.stringify(inv.items));
   editingInvoiceNumber = number;
   document.getElementById('saveInvoiceBtn').textContent = 'تحديث الفاتورة #' + number;
@@ -1017,7 +1059,7 @@ async function cancelInvoiceEdit(){
   editingInvoiceNumber = null;
   currentInvoiceItems = [];
   document.getElementById('custName').value='';
-  document.getElementById('invDiscount').value=0;
+  document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
   document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
   document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
@@ -1102,12 +1144,10 @@ function printInvoice(inv){
         <div style="color:#5A5852;font-size:12px;">${inv.date}</div>
       </div>
       <div style="text-align:center;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-          <img src="invoice-logo.png" style="width:36px;height:36px;object-fit:contain;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+          <img src="invoice-logo.png" style="width:52px;height:52px;object-fit:contain;">
           <h2 style="margin:0;font-size:16px;">${settings.officeName}</h2>
-        </div>
-        <div style="font-size:11px;color:#666;margin-top:2px;">
-          ${settings.phone||''} ${settings.address? ' - '+settings.address:''}
+          <span style="font-size:11px;color:#666;margin-right:14px;line-height:1.4;">${settings.phone||''}${settings.address? ' - '+settings.address:''}</span>
         </div>
       </div>
       <div><img src="qr-code.png" style="width:50px;height:50px;"></div>
@@ -1120,7 +1160,6 @@ function printInvoice(inv){
     </table>
     <div style="max-width:300px;margin-right:auto;margin-top:20px;">
       <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>إجمالي الأصناف</span><span>${fmt(inv.subtotal)}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>الخصم</span><span>${fmt(inv.discount)}</span></div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:bold;font-size:17px;border-top:2px solid #1C1B1A;"><span>الصافي المستحق</span><span>${fmt(inv.total)}</span></div>
     </div>
   `;
@@ -1486,6 +1525,81 @@ function updateCustomersDatalist(){
   dl.innerHTML = customers.map(c=>`<option value="${c.name}"></option>`).join('');
 }
 
+/* ---------- EXPENSES ---------- */
+let editingExpenseId = null;
+
+async function addExpense(){
+  const category = document.getElementById('expCategory').value;
+  const description = document.getElementById('expDescription').value.trim();
+  const amount = Number(document.getElementById('expAmount').value)||0;
+  const date = document.getElementById('expDate').value || todayStr();
+  if(!description){ alert('أدخل وصف المصروف.'); return; }
+
+  if(editingExpenseId){
+    const e = expenses.find(x=>x.id===editingExpenseId);
+    if(e){ e.category=category; e.description=description; e.amount=amount; e.date=date; }
+    editingExpenseId = null;
+    document.getElementById('addExpenseBtn').textContent = 'حفظ المصروف';
+    document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+  } else {
+    expenses.push({id:uid(), category, description, amount, date});
+  }
+  await Store.set('expenses', expenses);
+  document.getElementById('expDescription').value='';
+  document.getElementById('expAmount').value=0;
+  document.getElementById('expDate').value='';
+  renderExpensesTable();
+}
+document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
+
+function editExpense(id){
+  const e = expenses.find(x=>x.id===id);
+  if(!e) return;
+  document.getElementById('expCategory').value = e.category;
+  document.getElementById('expDescription').value = e.description;
+  document.getElementById('expAmount').value = e.amount;
+  document.getElementById('expDate').value = e.date;
+  editingExpenseId = id;
+  document.getElementById('addExpenseBtn').textContent = 'تحديث المصروف';
+  document.getElementById('cancelExpenseEditBtn').style.display = 'inline-block';
+  document.getElementById('expDescription').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelExpenseEdit(){
+  editingExpenseId = null;
+  document.getElementById('expDescription').value='';
+  document.getElementById('expAmount').value=0;
+  document.getElementById('expDate').value='';
+  document.getElementById('addExpenseBtn').textContent = 'حفظ المصروف';
+  document.getElementById('cancelExpenseEditBtn').style.display = 'none';
+}
+document.getElementById('cancelExpenseEditBtn').addEventListener('click', cancelExpenseEdit);
+
+async function deleteExpense(id){
+  if(!confirm('هل تريد حذف هذا المصروف؟')) return;
+  expenses = expenses.filter(e=>e.id!==id);
+  await Store.set('expenses', expenses);
+  renderExpensesTable();
+}
+
+function renderExpensesTable(){
+  const tbody = document.querySelector('#expensesTable tbody');
+  const sorted = [...expenses].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  tbody.innerHTML = sorted.map(e=>`
+    <tr><td>${e.date}</td><td>${e.category}</td><td>${e.description}</td><td>${fmt(e.amount)}</td>
+    <td>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editExpense('${e.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteExpense('${e.id}')" title="حذف">✕</button>
+    </td></tr>
+  `).join('');
+  document.getElementById('expensesEmpty').style.display = sorted.length? 'none':'block';
+
+  const total = expenses.reduce((s,e)=>s+e.amount,0);
+  document.getElementById('expensesTotalsBox').innerHTML = `
+    <div class="line final"><span>إجمالي المصروفات</span><span>${fmt(total)}</span></div>
+  `;
+}
+
 /* ---------- METER CATALOG ---------- */
 let editingMeterId = null;
 
@@ -1580,16 +1694,21 @@ document.getElementById('clearReportFilterBtn').addEventListener('click', ()=>{
 function renderReports(){
   const filteredInvoices = invoices.filter(i=>inReportDateRange(i.date));
   const filteredPurchases = purchases.filter(p=>inReportDateRange(p.date));
+  const filteredExpenses = expenses.filter(e=>inReportDateRange(e.date));
 
   const totalSales = filteredInvoices.reduce((s,i)=>s+i.total,0);
   const totalPurchases = filteredPurchases.reduce((s,p)=>s+p.total,0);
   const totalPrintCost = filteredInvoices.reduce((s,i)=>s+(i.printCost||0),0);
-  const netProfit = totalSales - totalPurchases - totalPrintCost;
+  const totalExpenses = filteredExpenses.reduce((s,e)=>s+e.amount,0);
+  const totalExtraCosts = filteredInvoices.reduce((s,i)=>s+(i.extraCost||0),0);
+  const netProfit = totalSales - totalPurchases - totalPrintCost - totalExpenses - totalExtraCosts;
 
   document.getElementById('reportCards').innerHTML = `
     <div class="stat-card"><div class="label">إجمالي المبيعات</div><div class="value">${fmt(totalSales)}</div></div>
     <div class="stat-card"><div class="label">إجمالي المشتريات</div><div class="value">${fmt(totalPurchases)}</div></div>
     <div class="stat-card"><div class="label">تكلفة الطباعة الخارجية</div><div class="value">${fmt(totalPrintCost)}</div></div>
+    <div class="stat-card"><div class="label">المصروفات التشغيلية</div><div class="value">${fmt(totalExpenses)}</div></div>
+    <div class="stat-card"><div class="label">تكاليف/عمولات إضافية</div><div class="value">${fmt(totalExtraCosts)}</div></div>
     <div class="stat-card"><div class="label">صافي الربح التقديري</div><div class="value">${fmt(netProfit)}</div></div>
   `;
 
@@ -2049,6 +2168,7 @@ async function init(){
   renderMeterTable();
   renderCustomersTable();
   updateCustomersDatalist();
+  renderExpensesTable();
   updateInvoiceNumberBadge();
   initCloudSync();
 }
