@@ -353,14 +353,7 @@
         <div class="row">
           <div class="field" style="max-width:180px;">
             <label>الفئة</label>
-            <select id="expCategory">
-              <option>أحبار وخراطيش</option>
-              <option>أوراق طباعة</option>
-              <option>آلات ومعدات</option>
-              <option>صيانة</option>
-              <option>إيجار</option>
-              <option>أخرى</option>
-            </select>
+            <input type="text" id="expCategory" placeholder="مثال: أحبار وخراطيش">
           </div>
           <div class="field"><label>الوصف</label><input type="text" id="expDescription" placeholder="مثال: حبر طابعة كانفس"></div>
           <div class="field" style="max-width:150px;"><label>المبلغ</label><input type="number" id="expAmount" value="0" min="0"></div>
@@ -1147,7 +1140,10 @@ function printInvoice(inv){
         <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
           <img src="invoice-logo.png" style="width:52px;height:52px;object-fit:contain;">
           <h2 style="margin:0;font-size:16px;">${settings.officeName}</h2>
-          <span style="font-size:11px;color:#666;margin-right:14px;line-height:1.4;">${settings.phone||''}${settings.address? ' - '+settings.address:''}</span>
+        </div>
+        <div style="font-size:11px;color:#666;line-height:1.7;margin-top:3px;">
+          <div>${settings.phone||''}</div>
+          <div>${settings.address||''}</div>
         </div>
       </div>
       <div><img src="qr-code.png" style="width:50px;height:50px;"></div>
@@ -1545,6 +1541,7 @@ async function addExpense(){
     expenses.push({id:uid(), category, description, amount, date});
   }
   await Store.set('expenses', expenses);
+  document.getElementById('expCategory').value='';
   document.getElementById('expDescription').value='';
   document.getElementById('expAmount').value=0;
   document.getElementById('expDate').value='';
