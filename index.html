@@ -55,15 +55,19 @@
     margin-bottom:10px;
   }
   .brand small{display:block;font-size:11px;color:#a8a49a;font-family:Tahoma,Arial;margin-top:4px;}
+  .nav-list{padding:0 12px;display:flex;flex-direction:column;gap:6px;}
   .nav-item{
-    padding:12px 20px;
+    display:flex;align-items:center;gap:10px;
+    padding:10px 16px;
     cursor:pointer;
     font-size:14px;
-    border-right:3px solid transparent;
-    color:#cfccc3;
+    border-radius:999px;
+    color:#EFEDE6;
   }
-  .nav-item:hover{background:#282724;color:#fff;}
-  .nav-item.active{background:#282724;color:#fff;border-right-color:var(--stamp);}
+  .nav-item i{font-size:18px;color:#EFEDE6;}
+  .nav-item:hover{background:rgba(255,255,255,0.10);}
+  .nav-item.active{background:rgba(255,255,255,0.18);color:#fff;}
+  .nav-item.active i{color:#fff;}
   .main{flex:1;padding:26px 32px;max-width:1100px;}
   h1{font-family:Georgia,'Times New Roman',serif;font-size:24px;margin:0 0 4px;}
   .subtitle{color:var(--ink-soft);font-size:13px;margin:0 0 22px;}
@@ -156,6 +160,7 @@
     .app{display:block;}
   }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
 </head>
 <body>
 <div id="lockScreen" class="no-print" style="position:fixed;inset:0;background:var(--paper);z-index:2000;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
@@ -182,15 +187,17 @@
     <div class="brand" id="officeNameSidebar">مكتب الدعاية والإعلان
       <small>نظام محاسبة داخلي</small>
     </div>
-    <div class="nav-item active" data-tab="dashboard">الرئيسية</div>
-    <div class="nav-item" data-tab="invoices">الفواتير</div>
-    <div class="nav-item" data-tab="purchases">المشتريات</div>
-    <div class="nav-item" data-tab="products">قسم المنتجات</div>
-    <div class="nav-item" data-tab="meter">قسم المطبوعات</div>
-    <div class="nav-item" data-tab="expenses">المصروفات</div>
-    <div class="nav-item" data-tab="customers">العملاء</div>
-    <div class="nav-item" data-tab="reports">التقارير</div>
-    <div class="nav-item" data-tab="settings">الإعدادات</div>
+    <div class="nav-list">
+      <div class="nav-item active" data-tab="dashboard"><i class="ti ti-home" aria-hidden="true"></i><span>الرئيسية</span></div>
+      <div class="nav-item" data-tab="invoices"><i class="ti ti-file-invoice" aria-hidden="true"></i><span>الفواتير</span></div>
+      <div class="nav-item" data-tab="purchases"><i class="ti ti-shopping-cart" aria-hidden="true"></i><span>المشتريات</span></div>
+      <div class="nav-item" data-tab="products"><i class="ti ti-box" aria-hidden="true"></i><span>قسم المنتجات</span></div>
+      <div class="nav-item" data-tab="meter"><i class="ti ti-printer" aria-hidden="true"></i><span>قسم المطبوعات</span></div>
+      <div class="nav-item" data-tab="expenses"><i class="ti ti-wallet" aria-hidden="true"></i><span>المصروفات</span></div>
+      <div class="nav-item" data-tab="customers"><i class="ti ti-users" aria-hidden="true"></i><span>العملاء</span></div>
+      <div class="nav-item" data-tab="reports"><i class="ti ti-chart-bar" aria-hidden="true"></i><span>التقارير</span></div>
+      <div class="nav-item" data-tab="settings"><i class="ti ti-settings" aria-hidden="true"></i><span>الإعدادات</span></div>
+    </div>
   </div>
 
   <div class="main">
@@ -1015,7 +1022,7 @@ async function saveInvoice(){
   updateCustomersDatalist();
   renderExpensesTable();
   updateInvoiceNumberBadge();
-  printInvoice(invoice);
+  printInvoice(invoice, false);
 }
 document.getElementById('saveInvoiceBtn').addEventListener('click', saveInvoice);
 
@@ -1108,7 +1115,8 @@ function renderInvoicesTable(){
     <tr>
       <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
       <td>
-        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')})">طباعة</button>
+        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, false)">طباعة</button>
+        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, true)">مبدئية</button>
         <button style="color:#25D366;" onclick="shareInvoiceWhatsapp(${i.number})" title="مشاركة عبر واتساب">واتساب</button>
         <button class="icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل">✎</button>
         <button class="icon-btn" onclick="deleteInvoice(${i.number})" title="حذف">✕</button>
@@ -1118,7 +1126,7 @@ function renderInvoicesTable(){
   document.getElementById('invoicesEmpty').style.display = sorted.length? 'none':'block';
 }
 
-function printInvoice(inv){
+function printInvoice(inv, isProforma){
   const itemsHtml = inv.items.map(it=>{
     if(it.type==='product'){
       return `<tr><td>${it.name}</td><td>${it.qty}</td><td>${fmt(it.unitPrice)}</td><td>${fmt(it.qty*it.unitPrice)}</td></tr>`;
@@ -1130,10 +1138,12 @@ function printInvoice(inv){
     }
   }).join('');
 
+  const topLabel = isProforma ? 'فاتورة مبدئية' : ('فاتورة #' + inv.number);
+
   document.getElementById('printArea').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
       <div style="text-align:right;">
-        <div style="font-weight:bold;font-size:15px;">فاتورة #${inv.number}</div>
+        <div style="font-weight:bold;font-size:15px;">${topLabel}</div>
         <div style="color:#5A5852;font-size:12px;">${inv.date}</div>
       </div>
       <div style="text-align:center;">
