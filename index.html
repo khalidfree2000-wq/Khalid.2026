@@ -160,7 +160,7 @@
     .app{display:block;}
   }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.35.0/tabler-icons.min.css">
 </head>
 <body>
 <div id="lockScreen" class="no-print" style="position:fixed;inset:0;background:var(--paper);z-index:2000;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
@@ -1115,7 +1115,7 @@ function renderInvoicesTable(){
     <tr>
       <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
       <td>
-        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, false)">طباعة</button>
+        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, false)">نهائية</button>
         <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, true)">مبدئية</button>
         <button style="color:#25D366;" onclick="shareInvoiceWhatsapp(${i.number})" title="مشاركة عبر واتساب">واتساب</button>
         <button class="icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل">✎</button>
