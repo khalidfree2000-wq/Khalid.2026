@@ -195,6 +195,7 @@
       <div class="nav-item" data-tab="meter"><i class="ti ti-printer" aria-hidden="true"></i><span>قسم المطبوعات</span></div>
       <div class="nav-item" data-tab="expenses"><i class="ti ti-wallet" aria-hidden="true"></i><span>المصروفات</span></div>
       <div class="nav-item" data-tab="customers"><i class="ti ti-users" aria-hidden="true"></i><span>العملاء</span></div>
+      <div class="nav-item" data-tab="debts"><i class="ti ti-alert-circle" aria-hidden="true"></i><span>الديون</span></div>
       <div class="nav-item" data-tab="reports"><i class="ti ti-chart-bar" aria-hidden="true"></i><span>التقارير</span></div>
       <div class="nav-item" data-tab="settings"><i class="ti ti-settings" aria-hidden="true"></i><span>الإعدادات</span></div>
     </div>
@@ -257,6 +258,13 @@
         </div>
         <p class="subtitle" style="margin-top:-6px;margin-bottom:14px;">مثل عمولة تركيب أو إيجار سيارة — تُخصم من أرباحك فقط في التقارير، ولا تظهر أو تُخصم من فاتورة العميل.</p>
 
+        <div class="row" style="align-items:center;margin-bottom:14px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);cursor:pointer;">
+            <input type="checkbox" id="invIsPaid" checked style="width:18px;height:18px;">
+            تم استلام المبلغ كاملاً (غير محددة = تُسجَّل كدين على العميل)
+          </label>
+        </div>
+
         <div class="totals-box" id="invTotalsBox"></div>
 
         <div class="row" style="margin-top:18px;">
@@ -270,7 +278,7 @@
         <div class="row" style="margin-bottom:14px;">
           <button id="exportSalesPdfBtn">تصدير تقرير المبيعات كملف PDF</button>
         </div>
-        <div class="table-scroll"><table id="invoicesTable"><thead><tr><th>رقم</th><th>الأخ/الأخوة</th><th>التاريخ</th><th>الإجمالي</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="table-scroll"><table id="invoicesTable"><thead><tr><th>رقم</th><th>الأخ/الأخوة</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="invoicesEmpty" style="display:none;">لا توجد فواتير محفوظة بعد.</div>
       </div>
     </section>
@@ -403,6 +411,20 @@
         <h2 id="customerHistoryTitle">سجل فواتير العميل</h2>
         <div class="table-scroll"><table id="customerHistoryTable"><thead><tr><th>رقم</th><th>التاريخ</th><th>الإجمالي</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="customerHistoryEmpty" style="display:none;">لا توجد فواتير سابقة لهذا العميل.</div>
+      </div>
+    </section>
+
+    <!-- DEBTS -->
+    <section id="tab-debts" style="display:none;">
+      <h1>الديون</h1>
+      <p class="subtitle">الفواتير التي لم يُستلم مبلغها بعد من العملاء</p>
+
+      <div class="cards" id="debtsCards"></div>
+
+      <div class="panel">
+        <h2>الفواتير المستحقة</h2>
+        <div class="table-scroll"><table id="debtsTable"><thead><tr><th>رقم</th><th>الأخ/الأخوة</th><th>التاريخ</th><th>المبلغ</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="debtsEmpty" style="display:none;">لا توجد ديون حالياً — كل الفواتير مدفوعة 🎉</div>
       </div>
     </section>
 
@@ -613,6 +635,9 @@ async function applyIncomingCloudData(data){
   updateCustomersDatalist();
   renderExpensesTable();
   updateInvoiceNumberBadge();
+  if(document.getElementById('tab-debts').style.display !== 'none'){
+    renderDebts();
+  }
   if(document.getElementById('tab-reports').style.display !== 'none'){
     renderReports();
     renderPurchasesDetailReport();
@@ -776,6 +801,7 @@ function switchToTab(tabName){
   document.querySelectorAll('.main > section').forEach(s=>s.style.display='none');
   document.getElementById('tab-' + tabName).style.display='block';
   if(tabName==='dashboard') renderDashboard();
+  if(tabName==='debts') renderDebts();
   if(tabName==='reports'){
     renderReports();
     renderPurchasesDetailReport();
@@ -809,7 +835,8 @@ function renderDashboard(){
     {label:'مبيعات اليوم', value: fmt(todaySales)},
     {label:'مشتريات اليوم', value: fmt(todayPurchases)},
     {label:'عدد الفواتير', value: invoices.length},
-    {label:'صافي الشهر', value: fmt(monthSales - monthPurchases)}
+    {label:'صافي الشهر', value: fmt(monthSales - monthPurchases)},
+    {label:'ديون مستحقة', value: fmt(invoices.filter(i=>i.paid===false).reduce((s,i)=>s+i.total,0))}
   ];
   document.getElementById('dashCards').innerHTML = cards.map(c=>`
     <div class="stat-card"><div class="label">${c.label}</div><div class="value">${c.value}</div></div>
@@ -982,6 +1009,7 @@ async function saveInvoice(){
   if(stockError){ alert(stockError); return; }
 
   const date = document.getElementById('invDate').value || todayStr();
+  const isPaid = document.getElementById('invIsPaid').checked;
   const t = computeInvoiceTotals();
 
   let invoice;
@@ -991,6 +1019,7 @@ async function saveInvoice(){
     invoice.date = date;
     invoice.items = JSON.parse(JSON.stringify(currentInvoiceItems));
     invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.extraCost = t.extraCost; invoice.total = t.net;
+    invoice.paid = isPaid;
     editingInvoiceNumber = null;
     document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
     document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
@@ -999,7 +1028,8 @@ async function saveInvoice(){
       number: invoiceCounter,
       customer, date,
       items: JSON.parse(JSON.stringify(currentInvoiceItems)),
-      subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net
+      subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net,
+      paid: isPaid
     };
     invoices.push(invoice);
     invoiceCounter += 1;
@@ -1015,6 +1045,7 @@ async function saveInvoice(){
   document.getElementById('custName').value='';
   document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
+  document.getElementById('invIsPaid').checked = true;
   renderInvoiceItemsUI();
   renderInvoicesTable();
   renderProductsTable();
@@ -1037,6 +1068,7 @@ async function editInvoice(number){
   document.getElementById('custName').value = inv.customer;
   document.getElementById('invDate').value = inv.date;
   document.getElementById('invExtraCost').value = inv.extraCost || 0;
+  document.getElementById('invIsPaid').checked = (inv.paid !== false);
   currentInvoiceItems = JSON.parse(JSON.stringify(inv.items));
   editingInvoiceNumber = number;
   document.getElementById('saveInvoiceBtn').textContent = 'تحديث الفاتورة #' + number;
@@ -1061,6 +1093,7 @@ async function cancelInvoiceEdit(){
   document.getElementById('custName').value='';
   document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
+  document.getElementById('invIsPaid').checked = true;
   document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
   document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
   renderInvoiceItemsUI();
@@ -1111,19 +1144,65 @@ function shareInvoiceWhatsapp(number){
 function renderInvoicesTable(){
   const tbody = document.querySelector('#invoicesTable tbody');
   const sorted = [...invoices].sort((a,b)=>b.number-a.number);
-  tbody.innerHTML = sorted.map(i=>`
+  tbody.innerHTML = sorted.map(i=>{
+    const paid = i.paid !== false;
+    const badge = paid
+      ? `<span class="badge badge-green">مدفوعة</span>`
+      : `<span class="badge" style="background:var(--danger-bg);color:var(--danger);">دين</span>`;
+    return `
     <tr>
       <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
+      <td>${badge}</td>
       <td>
         <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, false)">نهائية</button>
         <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, true)">مبدئية</button>
         <button style="color:#25D366;" onclick="shareInvoiceWhatsapp(${i.number})" title="مشاركة عبر واتساب">واتساب</button>
+        <button onclick="toggleInvoicePaid(${i.number})">${paid? 'تحويل لدين' : 'تحديد كمدفوعة'}</button>
         <button class="icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل">✎</button>
         <button class="icon-btn" onclick="deleteInvoice(${i.number})" title="حذف">✕</button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
   document.getElementById('invoicesEmpty').style.display = sorted.length? 'none':'block';
+}
+
+async function toggleInvoicePaid(number){
+  const inv = invoices.find(i=>i.number===number);
+  if(!inv) return;
+  inv.paid = (inv.paid === false); // flip: was unpaid -> now paid, was paid -> now unpaid
+  await Store.set('invoices', invoices);
+  renderInvoicesTable();
+  renderDebts();
+  renderDashboard();
+}
+
+async function markDebtPaid(number){
+  const inv = invoices.find(i=>i.number===number);
+  if(!inv) return;
+  inv.paid = true;
+  await Store.set('invoices', invoices);
+  renderInvoicesTable();
+  renderDebts();
+  renderDashboard();
+}
+
+function renderDebts(){
+  const unpaid = invoices.filter(i=>i.paid===false).sort((a,b)=>b.number-a.number);
+  const totalDebt = unpaid.reduce((s,i)=>s+i.total,0);
+
+  document.getElementById('debtsCards').innerHTML = `
+    <div class="stat-card"><div class="label">عدد الفواتير غير المدفوعة</div><div class="value">${unpaid.length}</div></div>
+    <div class="stat-card"><div class="label">إجمالي الديون المستحقة</div><div class="value">${fmt(totalDebt)}</div></div>
+  `;
+
+  document.querySelector('#debtsTable tbody').innerHTML = unpaid.map(i=>`
+    <tr>
+      <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
+      <td><button class="btn-primary" onclick="markDebtPaid(${i.number})">تحديد كمدفوعة</button></td>
+    </tr>
+  `).join('');
+  document.getElementById('debtsEmpty').style.display = unpaid.length? 'none':'block';
 }
 
 function printInvoice(inv, isProforma){
