@@ -192,6 +192,7 @@
       <div class="nav-item" data-tab="calculator"><i class="ti ti-calculator" aria-hidden="true"></i><span>الآلة الحاسبة</span></div>
       <div class="nav-item" data-tab="invoices"><i class="ti ti-file-invoice" aria-hidden="true"></i><span>الفواتير</span></div>
       <div class="nav-item" data-tab="purchases"><i class="ti ti-shopping-cart" aria-hidden="true"></i><span>المشتريات</span></div>
+      <div class="nav-item" data-tab="suppliers"><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>الموردين</span></div>
       <div class="nav-item" data-tab="products"><i class="ti ti-box" aria-hidden="true"></i><span>قسم المنتجات</span></div>
       <div class="nav-item" data-tab="meter"><i class="ti ti-printer" aria-hidden="true"></i><span>قسم المطبوعات</span></div>
       <div class="nav-item" data-tab="expenses"><i class="ti ti-wallet" aria-hidden="true"></i><span>المصروفات</span></div>
@@ -324,7 +325,7 @@
       <div class="panel">
         <h2>إضافة عملية شراء</h2>
         <div class="row">
-          <div class="field"><label>المورد</label><input type="text" id="pSupplier" placeholder="اسم المورد"></div>
+          <div class="field"><label>المورد</label><input type="text" id="pSupplier" list="suppliersDatalist" placeholder="اسم المورد"><datalist id="suppliersDatalist"></datalist></div>
           <div class="field"><label>الصنف المشترى</label><input type="text" id="pItem" placeholder="مثال: ألواح دروع خام"></div>
           <div class="field" style="max-width:120px;"><label>الكمية</label><input type="number" id="pQty" value="1" min="0"></div>
           <div class="field" style="max-width:150px;"><label>سعر الوحدة</label><input type="number" id="pUnitCost" value="0" min="0"></div>
@@ -341,6 +342,29 @@
         </div>
         <div class="table-scroll"><table id="purchasesTable" style="min-width:680px;"><thead><tr><th>التاريخ</th><th>المورد</th><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="purchasesEmpty" style="display:none;">لا توجد مشتريات مسجلة بعد.</div>
+      </div>
+    </section>
+
+    <!-- SUPPLIERS -->
+    <section id="tab-suppliers" style="display:none;">
+      <h1>الموردين</h1>
+      <p class="subtitle">قائمة موردي المكتب — تُستخدم لاقتراح الأسماء تلقائياً عند تسجيل عملية شراء</p>
+
+      <div class="panel">
+        <h2>إضافة مورد</h2>
+        <div class="row">
+          <div class="field"><label>اسم المورد</label><input type="text" id="suppFormName" placeholder="اسم المورد أو الشركة"></div>
+          <div class="field" style="max-width:200px;"><label>رقم الهاتف</label><input type="text" id="suppFormPhone" placeholder="05xxxxxxxx"></div>
+          <div class="field"><label>العنوان</label><input type="text" id="suppFormAddress" placeholder="المدينة - الحي - الشارع"></div>
+        </div>
+        <button class="btn-primary" id="addSupplierBtn">حفظ المورد</button>
+        <button id="cancelSupplierEditBtn" style="display:none;">إلغاء التعديل</button>
+      </div>
+
+      <div class="panel">
+        <h2>قائمة الموردين</h2>
+        <div class="table-scroll"><table id="suppliersTable"><thead><tr><th>الاسم</th><th>الهاتف</th><th>العنوان</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="suppliersEmpty" style="display:none;">لا يوجد موردون مضافون بعد — سيُضافون تلقائياً من أسماء المشتريات أيضاً.</div>
       </div>
     </section>
 
@@ -596,7 +620,7 @@ const FIREBASE_CONFIG = {
   appId: "1:347225260547:web:0a81a8790c6e267f768436"
 };
 const SYNC_CODE = "alwan-dawaya-2026-sync-x7f3q9k1";
-const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers','expenses'];
+const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers','expenses','suppliers'];
 
 let fbDb = null;
 let fbSyncEnabled = false;
@@ -619,7 +643,7 @@ async function pushToCloud(){
   if(!fbSyncEnabled || !fbDb) return;
   try{
     await fbDocRef().set({
-      products, meterTypes, purchases, invoices, customers, expenses,
+      products, meterTypes, purchases, invoices, customers, expenses, suppliers,
       settings: settingsForSync(), invoiceCounter,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -637,6 +661,7 @@ async function applyIncomingCloudData(data){
   if(data.invoices) invoices = data.invoices;
   if(data.customers) customers = data.customers;
   if(data.expenses) expenses = data.expenses;
+  if(data.suppliers) suppliers = data.suppliers;
   if(data.settings) settings = data.settings;
   if(typeof data.invoiceCounter === 'number') invoiceCounter = data.invoiceCounter;
 
@@ -648,6 +673,7 @@ async function applyIncomingCloudData(data){
     localStorage.setItem(STORAGE_PREFIX + 'invoices', JSON.stringify(invoices));
     localStorage.setItem(STORAGE_PREFIX + 'customers', JSON.stringify(customers));
     localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
+    localStorage.setItem(STORAGE_PREFIX + 'suppliers', JSON.stringify(suppliers));
     localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
     localStorage.setItem(STORAGE_PREFIX + 'invoiceCounter', JSON.stringify(invoiceCounter));
   }catch(e){ console.error(e); }
@@ -667,6 +693,8 @@ async function applyIncomingCloudData(data){
   renderCustomersTable();
   updateCustomersDatalist();
   renderExpensesTable();
+  renderSuppliersTable();
+  updateSuppliersDatalist();
   updateInvoiceNumberBadge();
   if(document.getElementById('tab-debts').style.display !== 'none'){
     renderDebts();
@@ -732,6 +760,7 @@ let purchases = [];
 let invoices = [];
 let customers = [];
 let expenses = [];
+let suppliers = [];
 let settings = { officeName: 'ألوان للدعاية', phone: '', address: '', currency: 'ر.س' };
 let invoiceCounter = 1;
 
@@ -752,6 +781,7 @@ async function loadAll(){
   invoices = await Store.get('invoices', []);
   customers = await Store.get('customers', []);
   expenses = await Store.get('expenses', []);
+  suppliers = await Store.get('suppliers', []);
   settings = await Store.get('settings', settings);
   invoiceCounter = await Store.get('invoiceCounter', 1);
 
@@ -1140,6 +1170,8 @@ async function saveInvoice(){
   renderCustomersTable();
   updateCustomersDatalist();
   renderExpensesTable();
+  renderSuppliersTable();
+  updateSuppliersDatalist();
   updateInvoiceNumberBadge();
   printInvoice(invoice, false);
 }
@@ -1463,9 +1495,11 @@ async function addPurchase(){
   const product = findOrCreateProductByName(item);
   product.stock = (product.stock||0) + qty;
   product.cost = unitCost;
+  findOrCreateSupplierByName(supplier);
 
   await Store.set('purchases', purchases);
   await Store.set('products', products);
+  await Store.set('suppliers', suppliers);
   document.getElementById('pSupplier').value='';
   document.getElementById('pItem').value='';
   document.getElementById('pQty').value=1;
@@ -1473,6 +1507,8 @@ async function addPurchase(){
   document.getElementById('pDate').value='';
   renderPurchasesTable();
   renderProductsTable();
+  renderSuppliersTable();
+  updateSuppliersDatalist();
   switchToTab('products');
 }
 document.getElementById('addPurchaseBtn').addEventListener('click', addPurchase);
@@ -1696,6 +1732,92 @@ function renderCustomersTable(){
 function updateCustomersDatalist(){
   const dl = document.getElementById('customersDatalist');
   dl.innerHTML = customers.map(c=>`<option value="${c.name}"></option>`).join('');
+}
+
+/* ---------- SUPPLIERS ---------- */
+let editingSupplierId = null;
+
+function findOrCreateSupplierByName(name){
+  const norm = name.trim().toLowerCase();
+  if(!norm) return null;
+  let s = suppliers.find(x=>x.name.trim().toLowerCase()===norm);
+  if(!s){
+    s = {id:uid(), name:name.trim(), phone:'', address:''};
+    suppliers.push(s);
+  }
+  return s;
+}
+
+async function addSupplier(){
+  const name = document.getElementById('suppFormName').value.trim();
+  const phone = document.getElementById('suppFormPhone').value.trim();
+  const address = document.getElementById('suppFormAddress').value.trim();
+  if(!name){ alert('أدخل اسم المورد.'); return; }
+
+  if(editingSupplierId){
+    const s = suppliers.find(x=>x.id===editingSupplierId);
+    if(s){ s.name=name; s.phone=phone; s.address=address; }
+    editingSupplierId = null;
+    document.getElementById('addSupplierBtn').textContent = 'حفظ المورد';
+    document.getElementById('cancelSupplierEditBtn').style.display = 'none';
+  } else {
+    suppliers.push({id:uid(), name, phone, address});
+  }
+  await Store.set('suppliers', suppliers);
+  document.getElementById('suppFormName').value='';
+  document.getElementById('suppFormPhone').value='';
+  document.getElementById('suppFormAddress').value='';
+  renderSuppliersTable();
+  updateSuppliersDatalist();
+}
+document.getElementById('addSupplierBtn').addEventListener('click', addSupplier);
+
+function editSupplier(id){
+  const s = suppliers.find(x=>x.id===id);
+  if(!s) return;
+  document.getElementById('suppFormName').value = s.name;
+  document.getElementById('suppFormPhone').value = s.phone || '';
+  document.getElementById('suppFormAddress').value = s.address || '';
+  editingSupplierId = id;
+  document.getElementById('addSupplierBtn').textContent = 'تحديث المورد';
+  document.getElementById('cancelSupplierEditBtn').style.display = 'inline-block';
+  document.getElementById('suppFormName').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelSupplierEdit(){
+  editingSupplierId = null;
+  document.getElementById('suppFormName').value='';
+  document.getElementById('suppFormPhone').value='';
+  document.getElementById('suppFormAddress').value='';
+  document.getElementById('addSupplierBtn').textContent = 'حفظ المورد';
+  document.getElementById('cancelSupplierEditBtn').style.display = 'none';
+}
+document.getElementById('cancelSupplierEditBtn').addEventListener('click', cancelSupplierEdit);
+
+async function deleteSupplier(id){
+  if(!confirm('هل تريد حذف هذا المورد من القائمة؟ (مشترياته السابقة تبقى محفوظة)')) return;
+  suppliers = suppliers.filter(s=>s.id!==id);
+  await Store.set('suppliers', suppliers);
+  renderSuppliersTable();
+  updateSuppliersDatalist();
+}
+
+function renderSuppliersTable(){
+  const tbody = document.querySelector('#suppliersTable tbody');
+  const sorted = [...suppliers].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  tbody.innerHTML = sorted.map(s=>`
+    <tr><td>${s.name}</td><td>${s.phone||'-'}</td><td>${s.address||'-'}</td>
+    <td>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editSupplier('${s.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteSupplier('${s.id}')" title="حذف">✕</button>
+    </td></tr>
+  `).join('');
+  document.getElementById('suppliersEmpty').style.display = sorted.length? 'none':'block';
+}
+
+function updateSuppliersDatalist(){
+  const dl = document.getElementById('suppliersDatalist');
+  dl.innerHTML = suppliers.map(s=>`<option value="${s.name}"></option>`).join('');
 }
 
 /* ---------- EXPENSES ---------- */
@@ -2343,6 +2465,8 @@ async function init(){
   renderCustomersTable();
   updateCustomersDatalist();
   renderExpensesTable();
+  renderSuppliersTable();
+  updateSuppliersDatalist();
   updateInvoiceNumberBadge();
   initCloudSync();
 }
