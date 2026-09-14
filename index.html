@@ -189,6 +189,7 @@
     </div>
     <div class="nav-list">
       <div class="nav-item active" data-tab="dashboard"><i class="ti ti-home" aria-hidden="true"></i><span>الرئيسية</span></div>
+      <div class="nav-item" data-tab="calculator"><i class="ti ti-calculator" aria-hidden="true"></i><span>الآلة الحاسبة</span></div>
       <div class="nav-item" data-tab="invoices"><i class="ti ti-file-invoice" aria-hidden="true"></i><span>الفواتير</span></div>
       <div class="nav-item" data-tab="purchases"><i class="ti ti-shopping-cart" aria-hidden="true"></i><span>المشتريات</span></div>
       <div class="nav-item" data-tab="products"><i class="ti ti-box" aria-hidden="true"></i><span>قسم المنتجات</span></div>
@@ -221,6 +222,38 @@
         <h2>آخر الفواتير</h2>
         <div class="table-scroll"><table id="dashInvoicesTable"><thead><tr><th>رقم</th><th>الأخ/الأخوة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="dashInvoicesEmpty" style="display:none;">لا توجد فواتير بعد. ابدأ بإنشاء أول فاتورة من تبويب الفواتير.</div>
+      </div>
+    </section>
+
+    <!-- CALCULATOR -->
+    <section id="tab-calculator" style="display:none;">
+      <h1>الآلة الحاسبة</h1>
+      <div class="panel" style="max-width:340px;">
+        <div id="calcDisplay" dir="ltr" style="background:#1C1B1A;color:#fff;font-size:32px;text-align:right;padding:16px;border-radius:10px;margin-bottom:14px;overflow-x:auto;white-space:nowrap;">0</div>
+        <div dir="ltr" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <button onclick="calcClear()" style="background:var(--danger-bg);color:var(--danger);">C</button>
+          <button onclick="calcBackspace()">⌫</button>
+          <button onclick="calcChooseOperator('/')" style="background:var(--gold-bg);color:var(--gold);">÷</button>
+          <button onclick="calcChooseOperator('*')" style="background:var(--gold-bg);color:var(--gold);">×</button>
+
+          <button onclick="calcInputDigit('7')">7</button>
+          <button onclick="calcInputDigit('8')">8</button>
+          <button onclick="calcInputDigit('9')">9</button>
+          <button onclick="calcChooseOperator('-')" style="background:var(--gold-bg);color:var(--gold);">−</button>
+
+          <button onclick="calcInputDigit('4')">4</button>
+          <button onclick="calcInputDigit('5')">5</button>
+          <button onclick="calcInputDigit('6')">6</button>
+          <button onclick="calcChooseOperator('+')" style="background:var(--gold-bg);color:var(--gold);">+</button>
+
+          <button onclick="calcInputDigit('1')">1</button>
+          <button onclick="calcInputDigit('2')">2</button>
+          <button onclick="calcInputDigit('3')">3</button>
+          <button onclick="calcCompute()" class="btn-stamp" style="grid-row: span 2;">=</button>
+
+          <button onclick="calcInputDigit('0')" style="grid-column: span 2;">0</button>
+          <button onclick="calcInputDigit('.')">.</button>
+        </div>
       </div>
     </section>
 
@@ -793,6 +826,61 @@ document.getElementById('hamburgerBtn').addEventListener('click', ()=>{
   document.getElementById('sidebarOverlay').classList.toggle('show');
 });
 document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
+/* ---------- CALCULATOR ---------- */
+let calcCurrent = '0';
+let calcPrevious = null;
+let calcOperator = null;
+let calcResetNext = false;
+
+function calcUpdateDisplay(){
+  document.getElementById('calcDisplay').textContent = calcCurrent;
+}
+
+function calcInputDigit(d){
+  if(calcResetNext){ calcCurrent = '0'; calcResetNext = false; }
+  if(d === '.' && calcCurrent.includes('.')) return;
+  if(calcCurrent === '0' && d !== '.'){ calcCurrent = d; }
+  else { calcCurrent += d; }
+  calcUpdateDisplay();
+}
+
+function calcChooseOperator(op){
+  if(calcOperator !== null && !calcResetNext){
+    calcCompute();
+  }
+  calcPrevious = parseFloat(calcCurrent);
+  calcOperator = op;
+  calcResetNext = true;
+}
+
+function calcCompute(){
+  if(calcOperator === null || calcPrevious === null) return;
+  const cur = parseFloat(calcCurrent);
+  let result;
+  switch(calcOperator){
+    case '+': result = calcPrevious + cur; break;
+    case '-': result = calcPrevious - cur; break;
+    case '*': result = calcPrevious * cur; break;
+    case '/': result = cur === 0 ? NaN : calcPrevious / cur; break;
+  }
+  calcCurrent = Number.isFinite(result) ? String(Math.round(result*100000)/100000) : 'خطأ';
+  calcOperator = null;
+  calcPrevious = null;
+  calcResetNext = true;
+  calcUpdateDisplay();
+}
+
+function calcClear(){
+  calcCurrent = '0'; calcPrevious = null; calcOperator = null; calcResetNext = false;
+  calcUpdateDisplay();
+}
+
+function calcBackspace(){
+  if(calcResetNext) return;
+  calcCurrent = calcCurrent.length>1 ? calcCurrent.slice(0,-1) : '0';
+  calcUpdateDisplay();
+}
 
 function switchToTab(tabName){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
