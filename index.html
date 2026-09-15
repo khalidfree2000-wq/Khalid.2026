@@ -302,7 +302,8 @@
         <div class="totals-box" id="invTotalsBox"></div>
 
         <div class="row" style="margin-top:18px;">
-          <button class="btn-stamp" id="saveInvoiceBtn">حفظ الفاتورة</button>
+          <button class="btn-stamp" id="saveInvoiceFinalBtn">حفظ كفاتورة نهائية</button>
+          <button id="saveInvoiceProformaBtn">حفظ فاتورة مبدئية</button>
           <button id="cancelInvoiceEditBtn" style="display:none;">إلغاء التعديل</button>
         </div>
       </div>
@@ -354,7 +355,11 @@
         <h2>إضافة مورد</h2>
         <div class="row">
           <div class="field"><label>اسم المورد</label><input type="text" id="suppFormName" placeholder="اسم المورد أو الشركة"></div>
-          <div class="field" style="max-width:200px;"><label>رقم الهاتف</label><input type="text" id="suppFormPhone" placeholder="05xxxxxxxx"></div>
+          <div class="field" style="max-width:260px;">
+            <label>أرقام الهاتف</label>
+            <div id="suppPhonesWrap"></div>
+            <button type="button" id="addSuppPhoneBtn" style="margin-top:6px;font-size:12px;padding:6px 10px;">+ إضافة رقم آخر</button>
+          </div>
           <div class="field"><label>العنوان</label><input type="text" id="suppFormAddress" placeholder="المدينة - الحي - الشارع"></div>
         </div>
         <button class="btn-primary" id="addSupplierBtn">حفظ المورد</button>
@@ -943,10 +948,10 @@ function renderDashboard(){
   document.getElementById('dashLogo').src = settings.customIcon || 'icon-192.png';
 
   const today = todayStr();
-  const todaySales = invoices.filter(i=>i.date===today).reduce((s,i)=>s+i.total,0);
+  const todaySales = invoices.filter(i=>i.date===today && !i.proforma).reduce((s,i)=>s+i.total,0);
   const todayPurchases = purchases.filter(p=>p.date===today).reduce((s,p)=>s+p.total,0);
   const monthPrefix = today.slice(0,7);
-  const monthSales = invoices.filter(i=>i.date && i.date.slice(0,7)===monthPrefix).reduce((s,i)=>s+i.total,0);
+  const monthSales = invoices.filter(i=>i.date && i.date.slice(0,7)===monthPrefix && !i.proforma).reduce((s,i)=>s+i.total,0);
   const monthPurchases = purchases.filter(p=>p.date && p.date.slice(0,7)===monthPrefix).reduce((s,p)=>s+p.total,0);
 
   const cards = [
@@ -954,7 +959,7 @@ function renderDashboard(){
     {label:'مشتريات اليوم', value: fmt(todayPurchases)},
     {label:'عدد الفواتير', value: invoices.length},
     {label:'صافي الشهر', value: fmt(monthSales - monthPurchases)},
-    {label:'ديون مستحقة', value: fmt(invoices.filter(i=>i.paid===false).reduce((s,i)=>s+i.total,0))}
+    {label:'ديون مستحقة', value: fmt(invoices.filter(i=>i.paid===false && !i.proforma).reduce((s,i)=>s+i.total,0))}
   ];
   document.getElementById('dashCards').innerHTML = cards.map(c=>`
     <div class="stat-card"><div class="label">${c.label}</div><div class="value">${c.value}</div></div>
@@ -993,7 +998,7 @@ function renderSalesChart(){
     const d = new Date();
     d.setDate(d.getDate()-i);
     const key = d.toISOString().slice(0,10);
-    const total = invoices.filter(inv=>inv.date===key).reduce((s,inv)=>s+inv.total,0);
+    const total = invoices.filter(inv=>inv.date===key && !inv.proforma).reduce((s,inv)=>s+inv.total,0);
     days.push({label: d.toLocaleDateString('ar-EG',{weekday:'short'}), total});
   }
   const maxVal = Math.max(...days.map(d=>d.total), 1);
@@ -1118,13 +1123,15 @@ document.getElementById('invExtraCost').addEventListener('input', renderInvoiceT
 
 let editingInvoiceNumber = null;
 
-async function saveInvoice(){
+async function saveInvoice(isProforma){
   if(currentInvoiceItems.length===0){ alert('أضف صنفاً واحداً على الأقل قبل الحفظ.'); return; }
   const customer = document.getElementById('custName').value.trim();
   if(!customer){ alert('أدخل اسم الأخ/الأخوة.'); return; }
 
-  const stockError = validateStock(currentInvoiceItems);
-  if(stockError){ alert(stockError); return; }
+  if(!isProforma){
+    const stockError = validateStock(currentInvoiceItems);
+    if(stockError){ alert(stockError); return; }
+  }
 
   const date = document.getElementById('invDate').value || todayStr();
   const isPaid = document.getElementById('invIsPaid').checked;
@@ -1138,8 +1145,10 @@ async function saveInvoice(){
     invoice.items = JSON.parse(JSON.stringify(currentInvoiceItems));
     invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.extraCost = t.extraCost; invoice.total = t.net;
     invoice.paid = isPaid;
+    invoice.proforma = isProforma;
     editingInvoiceNumber = null;
-    document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
+    document.getElementById('saveInvoiceFinalBtn').textContent = 'حفظ كفاتورة نهائية';
+    document.getElementById('saveInvoiceProformaBtn').textContent = 'حفظ فاتورة مبدئية';
     document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
   } else {
     invoice = {
@@ -1147,16 +1156,20 @@ async function saveInvoice(){
       customer, date,
       items: JSON.parse(JSON.stringify(currentInvoiceItems)),
       subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net,
-      paid: isPaid
+      paid: isPaid,
+      proforma: isProforma
     };
     invoices.push(invoice);
     invoiceCounter += 1;
     await Store.set('invoiceCounter', invoiceCounter);
   }
-  deductStock(currentInvoiceItems);
+
+  if(!isProforma){
+    deductStock(currentInvoiceItems);
+    await Store.set('products', products);
+  }
   findOrCreateCustomerByName(customer);
   await Store.set('customers', customers);
-  await Store.set('products', products);
   await Store.set('invoices', invoices);
 
   currentInvoiceItems = [];
@@ -1173,17 +1186,22 @@ async function saveInvoice(){
   renderSuppliersTable();
   updateSuppliersDatalist();
   updateInvoiceNumberBadge();
-  printInvoice(invoice, false);
+  renderDashboard();
+  printInvoice(invoice, isProforma);
 }
-document.getElementById('saveInvoiceBtn').addEventListener('click', saveInvoice);
+document.getElementById('saveInvoiceFinalBtn').addEventListener('click', ()=>saveInvoice(false));
+document.getElementById('saveInvoiceProformaBtn').addEventListener('click', ()=>saveInvoice(true));
 
 async function editInvoice(number){
   const inv = invoices.find(i=>i.number===number);
   if(!inv) return;
   // temporarily give back the stock reserved by this invoice so it can be re-validated/re-edited
-  restoreStock(inv.items);
-  await Store.set('products', products);
-  renderProductsTable();
+  // (skip for proforma invoices — they never touched stock in the first place)
+  if(!inv.proforma){
+    restoreStock(inv.items);
+    await Store.set('products', products);
+    renderProductsTable();
+  }
 
   document.getElementById('custName').value = inv.customer;
   document.getElementById('invDate').value = inv.date;
@@ -1191,7 +1209,8 @@ async function editInvoice(number){
   document.getElementById('invIsPaid').checked = (inv.paid !== false);
   currentInvoiceItems = JSON.parse(JSON.stringify(inv.items));
   editingInvoiceNumber = number;
-  document.getElementById('saveInvoiceBtn').textContent = 'تحديث الفاتورة #' + number;
+  document.getElementById('saveInvoiceFinalBtn').textContent = 'تحديث كفاتورة نهائية #' + number;
+  document.getElementById('saveInvoiceProformaBtn').textContent = 'تحديث كفاتورة مبدئية #' + number;
   document.getElementById('cancelInvoiceEditBtn').style.display = 'inline-block';
   switchToTab('invoices');
   renderInvoiceItemsUI();
@@ -1201,8 +1220,9 @@ async function editInvoice(number){
 async function cancelInvoiceEdit(){
   if(editingInvoiceNumber !== null){
     // re-apply the original reservation since we're abandoning the edit
+    // (skip for proforma invoices — they never had stock reserved)
     const original = invoices.find(i=>i.number===editingInvoiceNumber);
-    if(original){
+    if(original && !original.proforma){
       deductStock(original.items);
       await Store.set('products', products);
       renderProductsTable();
@@ -1214,16 +1234,17 @@ async function cancelInvoiceEdit(){
   document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
   document.getElementById('invIsPaid').checked = true;
-  document.getElementById('saveInvoiceBtn').textContent = 'حفظ الفاتورة';
+  document.getElementById('saveInvoiceFinalBtn').textContent = 'حفظ كفاتورة نهائية';
+  document.getElementById('saveInvoiceProformaBtn').textContent = 'حفظ فاتورة مبدئية';
   document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
   renderInvoiceItemsUI();
 }
 document.getElementById('cancelInvoiceEditBtn').addEventListener('click', cancelInvoiceEdit);
 
 async function deleteInvoice(number){
-  if(!confirm('هل تريد حذف الفاتورة رقم #' + number + '؟ سيتم إرجاع كمية المنتجات المباعة فيها إلى المخزون.')) return;
+  if(!confirm('هل تريد حذف الفاتورة رقم #' + number + '؟ سيتم إرجاع كمية المنتجات المباعة فيها إلى المخزون (إن وجدت).')) return;
   const inv = invoices.find(i=>i.number===number);
-  if(inv){
+  if(inv && !inv.proforma){
     restoreStock(inv.items);
     await Store.set('products', products);
   }
@@ -1266,9 +1287,12 @@ function renderInvoicesTable(){
   const sorted = [...invoices].sort((a,b)=>b.number-a.number);
   tbody.innerHTML = sorted.map(i=>{
     const paid = i.paid !== false;
-    const badge = paid
+    let badge = paid
       ? `<span class="badge badge-green">مدفوعة</span>`
       : `<span class="badge" style="background:var(--danger-bg);color:var(--danger);">دين</span>`;
+    if(i.proforma){
+      badge = `<span class="badge badge-gold">مبدئية</span>`;
+    }
     return `
     <tr>
       <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
@@ -1277,7 +1301,7 @@ function renderInvoicesTable(){
         <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, false)">نهائية</button>
         <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, true)">مبدئية</button>
         <button style="color:#25D366;" onclick="shareInvoiceWhatsapp(${i.number})" title="مشاركة عبر واتساب">واتساب</button>
-        <button onclick="toggleInvoicePaid(${i.number})">${paid? 'تحويل لدين' : 'تحديد كمدفوعة'}</button>
+        ${!i.proforma ? `<button onclick="toggleInvoicePaid(${i.number})">${paid? 'تحويل لدين' : 'تحديد كمدفوعة'}</button>` : ''}
         <button class="icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل">✎</button>
         <button class="icon-btn" onclick="deleteInvoice(${i.number})" title="حذف">✕</button>
       </td>
@@ -1308,7 +1332,7 @@ async function markDebtPaid(number){
 }
 
 function renderDebts(){
-  const unpaid = invoices.filter(i=>i.paid===false).sort((a,b)=>b.number-a.number);
+  const unpaid = invoices.filter(i=>i.paid===false && !i.proforma).sort((a,b)=>b.number-a.number);
   const totalDebt = unpaid.reduce((s,i)=>s+i.total,0);
 
   document.getElementById('debtsCards').innerHTML = `
@@ -1421,8 +1445,9 @@ function printPurchasesReport(){
 document.getElementById('exportPurchasesPdfBtn').addEventListener('click', printPurchasesReport);
 
 function printSalesReport(){
-  if(invoices.length === 0){ alert('لا توجد فواتير لتصديرها.'); return; }
-  const sorted = [...invoices].sort((a,b)=> (a.date||'').localeCompare(b.date||'') || a.number-b.number);
+  const salesOnly = invoices.filter(i=>!i.proforma);
+  if(salesOnly.length === 0){ alert('لا توجد فواتير لتصديرها.'); return; }
+  const sorted = [...salesOnly].sort((a,b)=> (a.date||'').localeCompare(b.date||'') || a.number-b.number);
   const rowsHtml = sorted.map(i=>{
     const itemsSummary = i.items.map(it=>{
       if(it.type==='product') return `${it.name} × ${it.qty}`;
@@ -1736,36 +1761,60 @@ function updateCustomersDatalist(){
 
 /* ---------- SUPPLIERS ---------- */
 let editingSupplierId = null;
+let currentSupplierPhones = [''];
+
+function renderSupplierPhonesUI(){
+  const wrap = document.getElementById('suppPhonesWrap');
+  wrap.innerHTML = currentSupplierPhones.map((p,idx)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+      <input type="text" value="${p}" placeholder="05xxxxxxxx" onchange="updateSupplierPhoneField(${idx},this.value)" style="flex:1;">
+      ${currentSupplierPhones.length>1 ? `<button type="button" class="icon-btn" onclick="removeSupplierPhoneField(${idx})" title="حذف">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+function updateSupplierPhoneField(idx, val){ currentSupplierPhones[idx] = val; }
+function removeSupplierPhoneField(idx){ currentSupplierPhones.splice(idx,1); renderSupplierPhonesUI(); }
+document.getElementById('addSuppPhoneBtn').addEventListener('click', ()=>{
+  currentSupplierPhones.push('');
+  renderSupplierPhonesUI();
+});
 
 function findOrCreateSupplierByName(name){
   const norm = name.trim().toLowerCase();
   if(!norm) return null;
   let s = suppliers.find(x=>x.name.trim().toLowerCase()===norm);
   if(!s){
-    s = {id:uid(), name:name.trim(), phone:'', address:''};
+    s = {id:uid(), name:name.trim(), phones:[], address:''};
     suppliers.push(s);
   }
   return s;
 }
 
+function supplierPhonesText(s){
+  if(s.phones && s.phones.length) return s.phones.join('، ');
+  if(s.phone) return s.phone; // legacy single-phone field
+  return '';
+}
+
 async function addSupplier(){
   const name = document.getElementById('suppFormName').value.trim();
-  const phone = document.getElementById('suppFormPhone').value.trim();
+  const phones = currentSupplierPhones.map(p=>p.trim()).filter(Boolean);
   const address = document.getElementById('suppFormAddress').value.trim();
   if(!name){ alert('أدخل اسم المورد.'); return; }
 
   if(editingSupplierId){
     const s = suppliers.find(x=>x.id===editingSupplierId);
-    if(s){ s.name=name; s.phone=phone; s.address=address; }
+    if(s){ s.name=name; s.phones=phones; delete s.phone; s.address=address; }
     editingSupplierId = null;
     document.getElementById('addSupplierBtn').textContent = 'حفظ المورد';
     document.getElementById('cancelSupplierEditBtn').style.display = 'none';
   } else {
-    suppliers.push({id:uid(), name, phone, address});
+    suppliers.push({id:uid(), name, phones, address});
   }
   await Store.set('suppliers', suppliers);
   document.getElementById('suppFormName').value='';
-  document.getElementById('suppFormPhone').value='';
+  currentSupplierPhones = [''];
+  renderSupplierPhonesUI();
   document.getElementById('suppFormAddress').value='';
   renderSuppliersTable();
   updateSuppliersDatalist();
@@ -1776,7 +1825,8 @@ function editSupplier(id){
   const s = suppliers.find(x=>x.id===id);
   if(!s) return;
   document.getElementById('suppFormName').value = s.name;
-  document.getElementById('suppFormPhone').value = s.phone || '';
+  currentSupplierPhones = (s.phones && s.phones.length) ? [...s.phones] : (s.phone ? [s.phone] : ['']);
+  renderSupplierPhonesUI();
   document.getElementById('suppFormAddress').value = s.address || '';
   editingSupplierId = id;
   document.getElementById('addSupplierBtn').textContent = 'تحديث المورد';
@@ -1787,7 +1837,8 @@ function editSupplier(id){
 function cancelSupplierEdit(){
   editingSupplierId = null;
   document.getElementById('suppFormName').value='';
-  document.getElementById('suppFormPhone').value='';
+  currentSupplierPhones = [''];
+  renderSupplierPhonesUI();
   document.getElementById('suppFormAddress').value='';
   document.getElementById('addSupplierBtn').textContent = 'حفظ المورد';
   document.getElementById('cancelSupplierEditBtn').style.display = 'none';
@@ -1806,7 +1857,7 @@ function renderSuppliersTable(){
   const tbody = document.querySelector('#suppliersTable tbody');
   const sorted = [...suppliers].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   tbody.innerHTML = sorted.map(s=>`
-    <tr><td>${s.name}</td><td>${s.phone||'-'}</td><td>${s.address||'-'}</td>
+    <tr><td>${s.name}</td><td>${supplierPhonesText(s)||'-'}</td><td>${s.address||'-'}</td>
     <td>
       <button class="icon-btn" style="color:var(--gold);" onclick="editSupplier('${s.id}')" title="تعديل">✎</button>
       <button class="icon-btn" onclick="deleteSupplier('${s.id}')" title="حذف">✕</button>
@@ -1988,7 +2039,7 @@ document.getElementById('clearReportFilterBtn').addEventListener('click', ()=>{
 });
 
 function renderReports(){
-  const filteredInvoices = invoices.filter(i=>inReportDateRange(i.date));
+  const filteredInvoices = invoices.filter(i=>inReportDateRange(i.date) && !i.proforma);
   const filteredPurchases = purchases.filter(p=>inReportDateRange(p.date));
   const filteredExpenses = expenses.filter(e=>inReportDateRange(e.date));
 
@@ -2081,7 +2132,7 @@ document.getElementById('exportPurchasesDetailPdfBtn').addEventListener('click',
 /* ---------- DETAILED REPORT: PRODUCT SALES ---------- */
 function getProductSalesRows(){
   const rows = [];
-  invoices.filter(inv=>inReportDateRange(inv.date)).forEach(inv=>{
+  invoices.filter(inv=>inReportDateRange(inv.date) && !inv.proforma).forEach(inv=>{
     inv.items.forEach(it=>{
       if(it.type==='product'){
         const product = products.find(x=>x.id===it.refId);
@@ -2155,7 +2206,7 @@ document.getElementById('exportProductSalesPdfBtn').addEventListener('click', pr
 /* ---------- DETAILED REPORT: PRINTOUT (METER) SALES ---------- */
 function getMeterSalesRows(){
   const rows = [];
-  invoices.filter(inv=>inReportDateRange(inv.date)).forEach(inv=>{
+  invoices.filter(inv=>inReportDateRange(inv.date) && !inv.proforma).forEach(inv=>{
     inv.items.forEach(it=>{
       if(it.type==='meter'){
         const width = Number(it.width)||0, height = Number(it.height)||0, count = Number(it.qty)||1;
@@ -2467,6 +2518,7 @@ async function init(){
   renderExpensesTable();
   renderSuppliersTable();
   updateSuppliersDatalist();
+  renderSupplierPhonesUI();
   updateInvoiceNumberBadge();
   initCloudSync();
 }
