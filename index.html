@@ -69,6 +69,8 @@
   .nav-item.active{background:rgba(255,255,255,0.18);color:#fff;}
   .nav-item.active i{color:#fff;}
   .main{flex:1;padding:26px 32px;max-width:1100px;}
+  @keyframes tabFadeIn{from{opacity:0;}to{opacity:1;}}
+  .main > section.fade-in{animation:tabFadeIn .25s ease;}
   h1{font-family:Georgia,'Times New Roman',serif;font-size:24px;margin:0 0 4px;}
   .subtitle{color:var(--ink-soft);font-size:13px;margin:0 0 22px;}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:26px;}
@@ -159,6 +161,18 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.35.0/tabler-icons.min.css">
 </head>
 <body>
+<div id="confirmModal" class="no-print" style="position:fixed;inset:0;background:rgba(28,27,26,0.55);z-index:2100;display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:14px;padding:24px 20px;width:100%;max-width:300px;text-align:center;">
+    <div style="width:52px;height:52px;border-radius:50%;background:var(--danger-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;color:var(--danger);">✕</div>
+    <p id="confirmModalTitle" style="font-size:16px;font-weight:bold;color:var(--ink);margin:0 0 6px;"></p>
+    <p id="confirmModalBody" style="font-size:13px;color:var(--ink-soft);margin:0 0 20px;"></p>
+    <div style="display:flex;gap:10px;">
+      <button id="confirmModalCancelBtn" style="flex:1;padding:10px;">إلغاء</button>
+      <button id="confirmModalOkBtn" style="flex:1;padding:10px;border:none;background:var(--danger);color:#fff;border-radius:6px;">حذف</button>
+    </div>
+  </div>
+</div>
+
 <div id="lockScreen" class="no-print" style="position:fixed;inset:0;background:var(--paper);z-index:2000;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;">
   <img src="icon-192.png" style="width:70px;height:70px;border-radius:16px;margin-bottom:16px;">
   <h2 id="lockTitle" style="margin-bottom:4px;">أدخل رمز الدخول</h2>
@@ -436,6 +450,14 @@
         <button id="cancelExpenseEditBtn" style="display:none;">إلغاء التعديل</button>
       </div>
 
+      <div class="panel" id="expensesChartPanel" style="display:none;">
+        <h2>توزيع المصروفات حسب الفئة</h2>
+        <div style="position:relative;width:100%;height:220px;">
+          <canvas id="expensesChart" role="img" aria-label="رسم دائري يوضح توزيع المصروفات حسب الفئة"></canvas>
+        </div>
+        <div id="expensesChartLegend" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;justify-content:center;font-size:12px;color:var(--ink-soft);"></div>
+      </div>
+
       <div class="panel">
         <h2>سجل المصروفات</h2>
         <div class="table-scroll"><table id="expensesTable"><thead><tr><th>التاريخ</th><th>الفئة</th><th>الوصف</th><th>المبلغ</th><th></th></tr></thead><tbody></tbody></table></div>
@@ -608,6 +630,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const STORAGE_PREFIX = 'mohasaba_';
 
@@ -806,6 +829,30 @@ async function loadAll(){
 
 function uid(){ return 'id' + Date.now() + Math.floor(Math.random()*1000); }
 
+function confirmDelete(title, body){
+  return new Promise((resolve)=>{
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalBody').textContent = body || '';
+    const modal = document.getElementById('confirmModal');
+    modal.style.display = 'flex';
+
+    const okBtn = document.getElementById('confirmModalOkBtn');
+    const cancelBtn = document.getElementById('confirmModalCancelBtn');
+
+    function cleanup(result){
+      modal.style.display = 'none';
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onOk(){ cleanup(true); }
+    function onCancel(){ cleanup(false); }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
 function findOrCreateProductByName(name){
   const norm = name.trim().toLowerCase();
   let p = products.find(x=>x.name.trim().toLowerCase()===norm);
@@ -917,8 +964,11 @@ function switchToTab(tabName){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   const navEl = document.querySelector('.nav-item[data-tab="' + tabName + '"]');
   if(navEl) navEl.classList.add('active');
-  document.querySelectorAll('.main > section').forEach(s=>s.style.display='none');
-  document.getElementById('tab-' + tabName).style.display='block';
+  document.querySelectorAll('.main > section').forEach(s=>{ s.style.display='none'; s.classList.remove('fade-in'); });
+  const target = document.getElementById('tab-' + tabName);
+  target.style.display='block';
+  void target.offsetWidth; // force reflow so the animation restarts every time
+  target.classList.add('fade-in');
   if(tabName==='dashboard') renderDashboard();
   if(tabName==='debts') renderDebts();
   if(tabName==='reports'){
@@ -1238,7 +1288,7 @@ async function cancelInvoiceEdit(){
 document.getElementById('cancelInvoiceEditBtn').addEventListener('click', cancelInvoiceEdit);
 
 async function deleteInvoice(number){
-  if(!confirm('هل تريد حذف الفاتورة رقم #' + number + '؟ سيتم إرجاع كمية المنتجات المباعة فيها إلى المخزون (إن وجدت).')) return;
+  if(!(await confirmDelete('حذف الفاتورة رقم #' + number + '؟', 'سيتم إرجاع كمية المنتجات المباعة فيها إلى المخزون (إن وجدت).'))) return;
   const inv = invoices.find(i=>i.number===number);
   if(inv && !inv.proforma){
     restoreStock(inv.items);
@@ -1561,7 +1611,7 @@ function cancelPurchaseEdit(){
 document.getElementById('cancelPurchaseEditBtn').addEventListener('click', cancelPurchaseEdit);
 
 async function deletePurchase(id){
-  if(!confirm('هل تريد حذف عملية الشراء هذه؟ سيتم خصم كميتها من مخزون المنتج المرتبط.')) return;
+  if(!(await confirmDelete('حذف عملية الشراء؟', 'سيتم خصم كميتها من مخزون المنتج المرتبط.'))) return;
   const p = purchases.find(x=>x.id===id);
   if(p){
     const product = products.find(x=>x.name.trim().toLowerCase()===p.item.trim().toLowerCase());
@@ -1642,7 +1692,7 @@ function cancelProductEdit(){
 document.getElementById('cancelProductEditBtn').addEventListener('click', cancelProductEdit);
 
 async function deleteProduct(id){
-  if(!confirm('هل تريد حذف هذا المنتج؟')) return;
+  if(!(await confirmDelete('حذف هذا المنتج؟', 'لا يمكن التراجع عن هذا الإجراء.'))) return;
   products = products.filter(p=>p.id!==id);
   await Store.set('products', products);
   renderProductsTable();
@@ -1717,7 +1767,7 @@ function cancelCustomerEdit(){
 document.getElementById('cancelCustomerEditBtn').addEventListener('click', cancelCustomerEdit);
 
 async function deleteCustomer(id){
-  if(!confirm('هل تريد حذف هذا العميل من القائمة؟ (فواتيره السابقة تبقى محفوظة)')) return;
+  if(!(await confirmDelete('حذف هذا العميل من القائمة؟', 'فواتيره السابقة تبقى محفوظة.'))) return;
   customers = customers.filter(c=>c.id!==id);
   await Store.set('customers', customers);
   renderCustomersTable();
@@ -1842,7 +1892,7 @@ function cancelSupplierEdit(){
 document.getElementById('cancelSupplierEditBtn').addEventListener('click', cancelSupplierEdit);
 
 async function deleteSupplier(id){
-  if(!confirm('هل تريد حذف هذا المورد من القائمة؟ (مشترياته السابقة تبقى محفوظة)')) return;
+  if(!(await confirmDelete('حذف هذا المورد من القائمة؟', 'مشترياته السابقة تبقى محفوظة.'))) return;
   suppliers = suppliers.filter(s=>s.id!==id);
   await Store.set('suppliers', suppliers);
   renderSuppliersTable();
@@ -1919,7 +1969,7 @@ function cancelExpenseEdit(){
 document.getElementById('cancelExpenseEditBtn').addEventListener('click', cancelExpenseEdit);
 
 async function deleteExpense(id){
-  if(!confirm('هل تريد حذف هذا المصروف؟')) return;
+  if(!(await confirmDelete('حذف هذا المصروف؟', 'لا يمكن التراجع عن هذا الإجراء.'))) return;
   expenses = expenses.filter(e=>e.id!==id);
   await Store.set('expenses', expenses);
   renderExpensesTable();
@@ -1941,6 +1991,43 @@ function renderExpensesTable(){
   document.getElementById('expensesTotalsBox').innerHTML = `
     <div class="line final"><span>إجمالي المصروفات</span><span>${fmt(total)}</span></div>
   `;
+
+  renderExpensesChart();
+}
+
+let expensesChartInstance = null;
+const EXPENSES_CHART_COLORS = ['#B23A2F','#9C7A28','#3B6D11','#1C1B1A','#888780','#7A1E63','#22285C'];
+
+function renderExpensesChart(){
+  const panel = document.getElementById('expensesChartPanel');
+  if(expenses.length === 0 || typeof Chart === 'undefined'){
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  const totals = {};
+  expenses.forEach(e=>{
+    const key = e.category || 'أخرى';
+    totals[key] = (totals[key]||0) + (Number(e.amount)||0);
+  });
+  const entries = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const labels = entries.map(e=>e[0]);
+  const data = entries.map(e=>e[1]);
+  const grandTotal = data.reduce((s,v)=>s+v,0) || 1;
+  const colors = labels.map((_,i)=>EXPENSES_CHART_COLORS[i % EXPENSES_CHART_COLORS.length]);
+
+  if(expensesChartInstance){ expensesChartInstance.destroy(); }
+  expensesChartInstance = new Chart(document.getElementById('expensesChart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#EFEDE6', borderWidth: 3 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, cutout:'62%' }
+  });
+
+  document.getElementById('expensesChartLegend').innerHTML = labels.map((label,i)=>{
+    const pct = Math.round((data[i]/grandTotal)*100);
+    return `<span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:${colors[i]};"></span>${label} ${pct}%</span>`;
+  }).join('');
 }
 
 /* ---------- METER CATALOG ---------- */
@@ -1992,7 +2079,7 @@ function cancelMeterEdit(){
 document.getElementById('cancelMeterEditBtn').addEventListener('click', cancelMeterEdit);
 
 async function deleteMeterType(id){
-  if(!confirm('هل تريد حذف هذه الخامة؟')) return;
+  if(!(await confirmDelete('حذف هذه الخامة؟', 'لا يمكن التراجع عن هذا الإجراء.'))) return;
   meterTypes = meterTypes.filter(m=>m.id!==id);
   await Store.set('meterTypes', meterTypes);
   renderMeterTable();
