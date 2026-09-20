@@ -661,6 +661,7 @@ const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','in
 let fbDb = null;
 let fbSyncEnabled = false;
 let fbPushTimer = null;
+let pendingSyncKeys = new Set();
 
 function setSyncStatus(text){
   const el = document.getElementById('fbSyncStatus');
@@ -675,18 +676,39 @@ function settingsForSync(){
   return settings; // settings holds no secrets, safe to sync as-is
 }
 
+function getSyncValueForKey(key){
+  switch(key){
+    case 'products': return products;
+    case 'meterTypes': return meterTypes;
+    case 'purchases': return purchases;
+    case 'invoices': return invoices;
+    case 'customers': return customers;
+    case 'expenses': return expenses;
+    case 'suppliers': return suppliers;
+    case 'settings': return settingsForSync();
+    case 'invoiceCounter': return invoiceCounter;
+    default: return undefined;
+  }
+}
+
 async function pushToCloud(){
   if(!fbSyncEnabled || !fbDb) return;
+  const keysToSend = [...pendingSyncKeys];
+  if(keysToSend.length === 0) return;
+  pendingSyncKeys.clear();
+  // Only send the fields that actually changed on THIS device — sending everything
+  // every time would overwrite fresher data another device already pushed for
+  // fields we happen to have a stale local copy of.
+  const payload = {};
+  keysToSend.forEach(k=>{ payload[k] = getSyncValueForKey(k); });
+  payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   try{
-    await fbDocRef().set({
-      products, meterTypes, purchases, invoices, customers, expenses, suppliers,
-      settings: settingsForSync(), invoiceCounter,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
+    await fbDocRef().set(payload, {merge:true});
     setSyncStatus('متصل ✅ (آخر رفع: ' + new Date().toLocaleTimeString('ar') + ')');
   }catch(e){
     console.error('cloud push failed', e);
     setSyncStatus('تعذر رفع آخر تحديث للسحابة، تحقق من الإنترنت');
+    keysToSend.forEach(k=>pendingSyncKeys.add(k)); // retry these next time
   }
 }
 
@@ -784,6 +806,7 @@ const Store = {
     catch(e){ console.error('storage error', e); alert('تعذر حفظ البيانات على هذا الجهاز. تأكد من توفر مساحة تخزين كافية.'); }
 
     if(SYNC_KEYS.includes(key) && fbSyncEnabled){
+      pendingSyncKeys.add(key);
       clearTimeout(fbPushTimer);
       fbPushTimer = setTimeout(()=>{ pushToCloud(); }, 400);
     }
