@@ -120,16 +120,6 @@
   .item-row .row-actions .icon-btn{font-size:20px;}
   .mini-label{font-size:11px;color:var(--ink-soft);margin-bottom:4px;display:block;}
   .icon-btn{border:none;background:transparent;color:var(--danger);font-size:16px;padding:4px 8px;}
-  .row-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
-  .action-icon-btn{
-    width:32px;height:32px;border-radius:50%;padding:0;
-    display:inline-flex;align-items:center;justify-content:center;
-    font-size:16px;border:1px solid var(--line);background:#fff;flex-shrink:0;color:var(--danger);
-  }
-  .action-icon-btn i{font-size:16px;}
-  .action-pill-btn{
-    padding:6px 12px;border-radius:999px;font-size:12px;flex-shrink:0;
-  }
   .totals-box{background:#faf9f6;border:1px solid var(--line);border-radius:8px;padding:14px 18px;max-width:340px;margin-right:auto;}
   .totals-box .line{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px;color:var(--ink-soft);}
   .totals-box .line.final{font-size:17px;font-weight:bold;color:var(--ink);border-top:1px solid var(--line);padding-top:8px;margin-top:2px;}
@@ -319,6 +309,16 @@
             <input type="checkbox" id="invIsPaid" checked style="width:18px;height:18px;">
             تم استلام المبلغ كاملاً (غير محددة = تُسجَّل كدين على العميل)
           </label>
+        </div>
+
+        <div class="row" id="paymentMethodWrap" style="align-items:center;margin-bottom:16px;">
+          <div class="field" style="max-width:320px;">
+            <label>طريقة الدفع</label>
+            <select id="invPaymentMethod">
+              <option value="نقدي">نقدي</option>
+              <option value="حوالة مصرفية">حوالة مصرفية</option>
+            </select>
+          </div>
         </div>
 
         <div class="totals-box" id="invTotalsBox"></div>
@@ -661,7 +661,6 @@ const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','in
 let fbDb = null;
 let fbSyncEnabled = false;
 let fbPushTimer = null;
-let pendingSyncKeys = new Set();
 
 function setSyncStatus(text){
   const el = document.getElementById('fbSyncStatus');
@@ -676,39 +675,18 @@ function settingsForSync(){
   return settings; // settings holds no secrets, safe to sync as-is
 }
 
-function getSyncValueForKey(key){
-  switch(key){
-    case 'products': return products;
-    case 'meterTypes': return meterTypes;
-    case 'purchases': return purchases;
-    case 'invoices': return invoices;
-    case 'customers': return customers;
-    case 'expenses': return expenses;
-    case 'suppliers': return suppliers;
-    case 'settings': return settingsForSync();
-    case 'invoiceCounter': return invoiceCounter;
-    default: return undefined;
-  }
-}
-
 async function pushToCloud(){
   if(!fbSyncEnabled || !fbDb) return;
-  const keysToSend = [...pendingSyncKeys];
-  if(keysToSend.length === 0) return;
-  pendingSyncKeys.clear();
-  // Only send the fields that actually changed on THIS device — sending everything
-  // every time would overwrite fresher data another device already pushed for
-  // fields we happen to have a stale local copy of.
-  const payload = {};
-  keysToSend.forEach(k=>{ payload[k] = getSyncValueForKey(k); });
-  payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
   try{
-    await fbDocRef().set(payload, {merge:true});
+    await fbDocRef().set({
+      products, meterTypes, purchases, invoices, customers, expenses, suppliers,
+      settings: settingsForSync(), invoiceCounter,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
     setSyncStatus('متصل ✅ (آخر رفع: ' + new Date().toLocaleTimeString('ar') + ')');
   }catch(e){
     console.error('cloud push failed', e);
     setSyncStatus('تعذر رفع آخر تحديث للسحابة، تحقق من الإنترنت');
-    keysToSend.forEach(k=>pendingSyncKeys.add(k)); // retry these next time
   }
 }
 
@@ -806,7 +784,6 @@ const Store = {
     catch(e){ console.error('storage error', e); alert('تعذر حفظ البيانات على هذا الجهاز. تأكد من توفر مساحة تخزين كافية.'); }
 
     if(SYNC_KEYS.includes(key) && fbSyncEnabled){
-      pendingSyncKeys.add(key);
       clearTimeout(fbPushTimer);
       fbPushTimer = setTimeout(()=>{ pushToCloud(); }, 400);
     }
@@ -1119,7 +1096,7 @@ function renderInvoiceItemsUI(){
           <div class="field-line"><label>الكمية</label><input type="number" min="0" value="${it.qty}" onchange="updateItemField(${idx},'qty',this.value)"></div>
           <div class="field-line"><label>السعر</label><input type="number" min="0" value="${it.unitPrice}" onchange="updateItemField(${idx},'unitPrice',this.value)"></div>
           <div class="field-line"><label>الإجمالي</label><input type="text" value="${fmt(it.qty*it.unitPrice)}" disabled></div>
-          <div class="row-actions"><button class="action-icon-btn" onclick="removeItem(${idx})" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button></div>
+          <div class="row-actions"><button class="icon-btn" onclick="removeItem(${idx})" title="حذف">✕</button></div>
         </div>`;
       } else {
         const options = meterTypes.map(m=>`<option value="${m.id}" ${m.id===it.refId?'selected':''}>${m.name}</option>`).join('');
@@ -1135,7 +1112,7 @@ function renderInvoiceItemsUI(){
           <div class="field-line"><label>سعر بيع المتر</label><input type="number" min="0" value="${it.unitPrice}" onchange="updateItemField(${idx},'unitPrice',this.value)"></div>
           <div class="field-line"><label>تكلفة الطباعة للمتر</label><input type="number" min="0" value="${it.printCost}" onchange="updateItemField(${idx},'printCost',this.value)"></div>
           <div class="field-line"><label>الإجمالي</label><input type="text" value="${fmt(total)}" disabled></div>
-          <div class="row-actions"><button class="action-icon-btn" onclick="removeItem(${idx})" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button></div>
+          <div class="row-actions"><button class="icon-btn" onclick="removeItem(${idx})" title="حذف">✕</button></div>
         </div>`;
       }
     }).join('');
@@ -1221,6 +1198,7 @@ async function saveInvoice(isProforma){
 
   const date = document.getElementById('invDate').value || todayStr();
   const isPaid = document.getElementById('invIsPaid').checked;
+  const paymentMethod = isPaid ? document.getElementById('invPaymentMethod').value : '';
   const t = computeInvoiceTotals();
 
   let invoice;
@@ -1231,6 +1209,7 @@ async function saveInvoice(isProforma){
     invoice.items = JSON.parse(JSON.stringify(currentInvoiceItems));
     invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.extraCost = t.extraCost; invoice.total = t.net;
     invoice.paid = isPaid;
+    invoice.paymentMethod = paymentMethod;
     invoice.proforma = isProforma;
     editingInvoiceNumber = null;
     document.getElementById('saveInvoiceFinalBtn').textContent = 'حفظ كفاتورة نهائية';
@@ -1243,6 +1222,7 @@ async function saveInvoice(isProforma){
       items: JSON.parse(JSON.stringify(currentInvoiceItems)),
       subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net,
       paid: isPaid,
+      paymentMethod: paymentMethod,
       proforma: isProforma
     };
     invoices.push(invoice);
@@ -1263,6 +1243,8 @@ async function saveInvoice(isProforma){
   document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
   document.getElementById('invIsPaid').checked = true;
+  document.getElementById('invPaymentMethod').value = 'نقدي';
+  updatePaymentMethodUI();
   renderInvoiceItemsUI();
   renderInvoicesTable();
   renderProductsTable();
@@ -1275,6 +1257,18 @@ async function saveInvoice(isProforma){
   renderDashboard();
   printInvoice(invoice, isProforma);
 }
+function updatePaymentMethodUI(){
+  const paid = document.getElementById('invIsPaid').checked;
+  const wrap = document.getElementById('paymentMethodWrap');
+  const select = document.getElementById('invPaymentMethod');
+  if(!wrap || !select) return;
+  wrap.style.opacity = paid ? '1' : '0.5';
+  select.disabled = !paid;
+  if(paid && !select.value) select.value = 'نقدي';
+}
+document.getElementById('invIsPaid').addEventListener('change', updatePaymentMethodUI);
+updatePaymentMethodUI();
+
 document.getElementById('saveInvoiceFinalBtn').addEventListener('click', ()=>saveInvoice(false));
 document.getElementById('saveInvoiceProformaBtn').addEventListener('click', ()=>saveInvoice(true));
 
@@ -1293,6 +1287,8 @@ async function editInvoice(number){
   document.getElementById('invDate').value = inv.date;
   document.getElementById('invExtraCost').value = inv.extraCost || 0;
   document.getElementById('invIsPaid').checked = (inv.paid !== false);
+  document.getElementById('invPaymentMethod').value = inv.paymentMethod || 'نقدي';
+  updatePaymentMethodUI();
   currentInvoiceItems = JSON.parse(JSON.stringify(inv.items));
   editingInvoiceNumber = number;
   document.getElementById('saveInvoiceFinalBtn').textContent = 'تحديث كفاتورة نهائية #' + number;
@@ -1384,14 +1380,12 @@ function renderInvoicesTable(){
       <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
       <td>${badge}</td>
       <td>
-        <div class="row-actions">
-          <button class="action-icon-btn" style="color:#1C1B1A;" onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, false)" title="طباعة نهائية"><i class="ti ti-printer" aria-hidden="true"></i></button>
-          <button class="action-icon-btn" style="color:var(--gold);" onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, true)" title="طباعة مبدئية"><i class="ti ti-file-text" aria-hidden="true"></i></button>
-          <button class="action-icon-btn" style="color:#25D366;" onclick="shareInvoiceWhatsapp(${i.number})" title="مشاركة عبر واتساب"><i class="ti ti-brand-whatsapp" aria-hidden="true"></i></button>
-          ${!i.proforma ? `<button class="action-pill-btn" onclick="toggleInvoicePaid(${i.number})">${paid? 'تحويل لدين' : 'تحديد كمدفوعة'}</button>` : ''}
-          <button class="action-icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-          <button class="action-icon-btn" style="color:var(--danger);" onclick="deleteInvoice(${i.number})" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
-        </div>
+        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, false)">نهائية</button>
+        <button onclick="printInvoice(${JSON.stringify(i).replace(/"/g,'&quot;')}, true)">مبدئية</button>
+        <button style="color:#25D366;" onclick="shareInvoiceWhatsapp(${i.number})" title="مشاركة عبر واتساب">واتساب</button>
+        ${!i.proforma ? `<button onclick="toggleInvoicePaid(${i.number})">${paid? 'تحويل لدين' : 'تحديد كمدفوعة'}</button>` : ''}
+        <button class="icon-btn" style="color:var(--gold);" onclick="editInvoice(${i.number})" title="تعديل">✎</button>
+        <button class="icon-btn" onclick="deleteInvoice(${i.number})" title="حذف">✕</button>
       </td>
     </tr>
   `;
@@ -1413,6 +1407,7 @@ async function markDebtPaid(number){
   const inv = invoices.find(i=>i.number===number);
   if(!inv) return;
   inv.paid = true;
+  if(!inv.paymentMethod) inv.paymentMethod = 'نقدي';
   await Store.set('invoices', invoices);
   renderInvoicesTable();
   renderDebts();
@@ -1471,6 +1466,7 @@ function printInvoice(inv, isProforma){
     </div>
     <div style="border-bottom:2px solid #1C1B1A;margin-bottom:14px;"></div>
     <p><strong>الأخ / الأخوة:</strong> ${inv.customer}</p>
+    ${!isProforma && inv.paid !== false ? `<p><strong>طريقة الدفع:</strong> ${inv.paymentMethod || 'نقدي'}</p>` : (!isProforma ? `<p><strong>حالة الدفع:</strong> دين على العميل</p>` : '')}
     <table style="width:100%;border-collapse:collapse;margin-top:14px;">
       <thead><tr style="border-bottom:2px solid #1C1B1A;"><th style="text-align:right;padding:8px;">الصنف</th><th style="text-align:right;padding:8px;">الكمية / المساحة</th><th style="text-align:right;padding:8px;">السعر</th><th style="text-align:right;padding:8px;">الإجمالي</th></tr></thead>
       <tbody>${itemsHtml}</tbody>
@@ -1673,8 +1669,8 @@ function renderPurchasesTable(){
     <tr>
       <td>${p.date}</td><td>${p.supplier}</td><td>${p.item}</td><td>${p.qty}</td><td>${fmt(p.unitCost)}</td><td>${fmt(p.total)}</td>
       <td>
-        <button class="action-icon-btn" style="color:var(--gold);" onclick="editPurchase('${p.id}')" title="تعديل"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-        <button class="action-icon-btn" onclick="deletePurchase('${p.id}')" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        <button class="icon-btn" style="color:var(--gold);" onclick="editPurchase('${p.id}')" title="تعديل">✎</button>
+        <button class="icon-btn" onclick="deletePurchase('${p.id}')" title="حذف">✕</button>
       </td>
     </tr>
   `).join('');
@@ -1745,8 +1741,8 @@ function renderProductsTable(){
   tbody.innerHTML = products.map(p=>`
     <tr><td>${p.name}</td><td>${fmt(p.price)}</td><td>${fmt(p.cost)}</td><td>${p.stock||0}</td>
     <td>
-      <button class="action-icon-btn" style="color:var(--gold);" onclick="editProduct('${p.id}')" title="تعديل"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-      <button class="action-icon-btn" onclick="deleteProduct('${p.id}')" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editProduct('${p.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteProduct('${p.id}')" title="حذف">✕</button>
     </td></tr>
   `).join('');
   document.getElementById('productsEmpty').style.display = products.length? 'none':'block';
@@ -1835,8 +1831,8 @@ function renderCustomersTable(){
     <tr><td>${c.name}</td><td>${c.phone||'-'}</td>
     <td>
       <button onclick="showCustomerHistory('${c.name.replace(/'/g,"\\'")}')">السجل</button>
-      <button class="action-icon-btn" style="color:var(--gold);" onclick="editCustomer('${c.id}')" title="تعديل"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-      <button class="action-icon-btn" onclick="deleteCustomer('${c.id}')" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editCustomer('${c.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteCustomer('${c.id}')" title="حذف">✕</button>
     </td></tr>
   `).join('');
   document.getElementById('customersEmpty').style.display = sorted.length? 'none':'block';
@@ -1856,7 +1852,7 @@ function renderSupplierPhonesUI(){
   wrap.innerHTML = currentSupplierPhones.map((p,idx)=>`
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
       <input type="text" value="${p}" placeholder="05xxxxxxxx" onchange="updateSupplierPhoneField(${idx},this.value)" style="flex:1;">
-      ${currentSupplierPhones.length>1 ? `<button type="button" class="action-icon-btn" onclick="removeSupplierPhoneField(${idx})" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>` : ''}
+      ${currentSupplierPhones.length>1 ? `<button type="button" class="icon-btn" onclick="removeSupplierPhoneField(${idx})" title="حذف">✕</button>` : ''}
     </div>
   `).join('');
 }
@@ -1947,8 +1943,8 @@ function renderSuppliersTable(){
   tbody.innerHTML = sorted.map(s=>`
     <tr><td>${s.name}</td><td>${supplierPhonesText(s)||'-'}</td><td>${s.address||'-'}</td>
     <td>
-      <button class="action-icon-btn" style="color:var(--gold);" onclick="editSupplier('${s.id}')" title="تعديل"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-      <button class="action-icon-btn" onclick="deleteSupplier('${s.id}')" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editSupplier('${s.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteSupplier('${s.id}')" title="حذف">✕</button>
     </td></tr>
   `).join('');
   document.getElementById('suppliersEmpty').style.display = sorted.length? 'none':'block';
@@ -2023,8 +2019,8 @@ function renderExpensesTable(){
   tbody.innerHTML = sorted.map(e=>`
     <tr><td>${e.date}</td><td>${e.category}</td><td>${e.description}</td><td>${fmt(e.amount)}</td>
     <td>
-      <button class="action-icon-btn" style="color:var(--gold);" onclick="editExpense('${e.id}')" title="تعديل"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-      <button class="action-icon-btn" onclick="deleteExpense('${e.id}')" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editExpense('${e.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteExpense('${e.id}')" title="حذف">✕</button>
     </td></tr>
   `).join('');
   document.getElementById('expensesEmpty').style.display = sorted.length? 'none':'block';
@@ -2132,8 +2128,8 @@ function renderMeterTable(){
   tbody.innerHTML = meterTypes.map(m=>`
     <tr><td>${m.name}</td><td>${fmt(m.price)}</td><td>${fmt(m.printCost)}</td>
     <td>
-      <button class="action-icon-btn" style="color:var(--gold);" onclick="editMeterType('${m.id}')" title="تعديل"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-      <button class="action-icon-btn" onclick="deleteMeterType('${m.id}')" title="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      <button class="icon-btn" style="color:var(--gold);" onclick="editMeterType('${m.id}')" title="تعديل">✎</button>
+      <button class="icon-btn" onclick="deleteMeterType('${m.id}')" title="حذف">✕</button>
     </td></tr>
   `).join('');
   document.getElementById('meterEmpty').style.display = meterTypes.length? 'none':'block';
