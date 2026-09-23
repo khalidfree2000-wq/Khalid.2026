@@ -39,52 +39,36 @@
   }
   .app{display:flex;min-height:100vh;}
   .sidebar{
-    width:246px;
+    width:220px;
     background:var(--nav-bg);
     color:#EFEDE6;
     flex-shrink:0;
-    padding:18px 0 16px;
+    padding:20px 0;
     display:flex;
     flex-direction:column;
-    box-shadow:4px 0 18px rgba(28,27,26,.10);
   }
   .brand{
-    display:flex;align-items:center;gap:11px;
     font-family:'Cairo',sans-serif;font-weight:700;
-    font-size:17px;
-    padding:2px 18px 18px;
-    border-bottom:1px solid rgba(255,255,255,.14);
-    margin-bottom:12px;
+    font-size:18px;
+    padding:0 20px 20px;
+    border-bottom:1px solid #3a3936;
+    margin-bottom:10px;
   }
-  .brand-logo{width:46px;height:46px;border-radius:13px;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,.18);flex-shrink:0;}
-  .brand-text{min-width:0;}
-  .brand small{display:block;font-size:10px;color:rgba(255,255,255,.68);font-family:Tahoma,Arial;margin-top:2px;font-weight:400;}
-  .nav-list{padding:0 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;}
-  .nav-group-title{font-size:10px;color:rgba(255,255,255,.50);padding:11px 12px 4px;font-weight:700;letter-spacing:.2px;}
+  .brand small{display:block;font-size:11px;color:#a8a49a;font-family:Tahoma,Arial;margin-top:4px;}
+  .nav-list{padding:0 12px;display:flex;flex-direction:column;gap:6px;}
   .nav-item{
-    display:flex;align-items:center;gap:11px;
-    padding:10px 13px;
+    display:flex;align-items:center;gap:10px;
+    padding:10px 16px;
     cursor:pointer;
-    font-size:13.5px;
-    border-radius:10px;
-    color:rgba(255,255,255,.88);
-    transition:background .18s ease,transform .18s ease,color .18s ease;
+    font-size:14px;
+    border-radius:999px;
+    color:#EFEDE6;
   }
-  .nav-item i{font-size:19px;color:rgba(255,255,255,.72);width:21px;text-align:center;}
-  .nav-item:hover{background:rgba(255,255,255,.09);transform:translateX(-2px);color:#fff;}
-  .nav-item.active{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset -3px 0 0 rgba(255,255,255,.9);}
+  .nav-item i{font-size:18px;color:#EFEDE6;}
+  .nav-item:hover{background:rgba(255,255,255,0.10);}
+  .nav-item.active{background:rgba(255,255,255,0.18);color:#fff;}
   .nav-item.active i{color:#fff;}
-  .main{flex:1;padding:30px 34px;max-width:none;min-width:0;}
-  .page-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;}
-  .page-head-left{display:flex;align-items:center;gap:12px;}
-  .page-head-icon{width:44px;height:44px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(28,27,26,.07);font-size:21px;color:var(--stamp);}
-  .dashboard-hero{background:linear-gradient(135deg,#fff 0%,#f7f4ee 100%);border:1px solid rgba(156,122,40,.16);border-radius:18px;padding:20px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 5px 18px rgba(28,27,26,.06);}
-  .hero-actions{display:flex;gap:8px;flex-wrap:wrap;}
-  .quick-btn{border:none;background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;font-size:12px;display:inline-flex;align-items:center;gap:7px;}
-  .quick-btn:hover{background:#303030;transform:translateY(-1px);}
-  .quick-btn i{font-size:16px;}
-  .cards .stat-card{border:1px solid rgba(28,27,26,.05);transition:transform .18s ease,box-shadow .18s ease;}
-  .cards .stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(28,27,26,.09);}
+  .main{flex:1;padding:26px 32px;max-width:1100px;}
   @keyframes tabFadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
   .main > section.fade-in{animation:tabFadeIn .35s ease;}
   h1{font-family:'Cairo',sans-serif;font-weight:700;font-size:24px;margin:0 0 4px;}
@@ -165,7 +149,7 @@
   @media (max-width:920px){
     .mobile-topbar{display:flex;}
     .sidebar{
-      position:fixed;top:0;right:0;height:100%;width:280px;
+      position:fixed;top:0;right:0;height:100%;width:250px;
       transform:translateX(100%);transition:transform .25s ease;z-index:1000;
       overflow-y:auto;
     }
@@ -212,27 +196,21 @@
 
 
   <div class="sidebar no-print">
-    <div class="brand" id="officeNameSidebar">
-      <img class="brand-logo" src="icon-192.png" alt="شعار المكتب">
-      <div class="brand-text"><span id="officeNameSidebarText">مكتب الدعاية والإعلان</span><small>نظام محاسبة داخلي</small></div>
+    <div class="brand" id="officeNameSidebar">مكتب الدعاية والإعلان
+      <small>نظام محاسبة داخلي</small>
     </div>
     <div class="nav-list">
-      <div class="nav-group-title">الرئيسية</div>
-      <div class="nav-item active" data-tab="dashboard"><i class="ti ti-home" aria-hidden="true"></i><span>لوحة المتابعة</span></div>
+      <div class="nav-item active" data-tab="dashboard"><i class="ti ti-home" aria-hidden="true"></i><span>الرئيسية</span></div>
       <div class="nav-item" data-tab="calculator"><i class="ti ti-calculator" aria-hidden="true"></i><span>الآلة الحاسبة</span></div>
-      <div class="nav-group-title">المبيعات والعملاء</div>
       <div class="nav-item" data-tab="invoices"><i class="ti ti-file-invoice" aria-hidden="true"></i><span>الفواتير</span></div>
+      <div class="nav-item" data-tab="purchases"><i class="ti ti-shopping-cart" aria-hidden="true"></i><span>المشتريات</span></div>
+      <div class="nav-item" data-tab="suppliers"><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>الموردين</span></div>
+      <div class="nav-item" data-tab="products"><i class="ti ti-box" aria-hidden="true"></i><span>قسم المنتجات</span></div>
+      <div class="nav-item" data-tab="meter"><i class="ti ti-printer" aria-hidden="true"></i><span>قسم المطبوعات</span></div>
+      <div class="nav-item" data-tab="expenses"><i class="ti ti-wallet" aria-hidden="true"></i><span>المصروفات</span></div>
       <div class="nav-item" data-tab="customers"><i class="ti ti-users" aria-hidden="true"></i><span>العملاء</span></div>
       <div class="nav-item" data-tab="debts"><i class="ti ti-alert-circle" aria-hidden="true"></i><span>الديون</span></div>
-      <div class="nav-group-title">المشتريات والمخزون</div>
-      <div class="nav-item" data-tab="purchases"><i class="ti ti-shopping-cart" aria-hidden="true"></i><span>المشتريات</span></div>
-      <div class="nav-item" data-tab="suppliers"><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>الموردون</span></div>
-      <div class="nav-item" data-tab="products"><i class="ti ti-box" aria-hidden="true"></i><span>المنتجات</span></div>
-      <div class="nav-item" data-tab="meter"><i class="ti ti-printer" aria-hidden="true"></i><span>المطبوعات</span></div>
-      <div class="nav-group-title">المالية</div>
-      <div class="nav-item" data-tab="expenses"><i class="ti ti-wallet" aria-hidden="true"></i><span>المصروفات</span></div>
       <div class="nav-item" data-tab="reports"><i class="ti ti-chart-bar" aria-hidden="true"></i><span>التقارير</span></div>
-      <div class="nav-group-title">النظام</div>
       <div class="nav-item" data-tab="settings"><i class="ti ti-settings" aria-hidden="true"></i><span>الإعدادات</span></div>
     </div>
   </div>
@@ -241,16 +219,9 @@
 
     <!-- DASHBOARD -->
     <section id="tab-dashboard">
-      <div class="dashboard-hero">
-        <div class="page-head-left">
-          <div class="page-head-icon"><i class="ti ti-layout-dashboard" aria-hidden="true"></i></div>
-          <div><h1 style="margin:0;">لوحة المتابعة</h1><p class="subtitle" id="todayDate" style="margin:3px 0 0;"></p></div>
-        </div>
-        <div class="hero-actions">
-          <button class="quick-btn" onclick="switchToTab('invoices')"><i class="ti ti-file-invoice"></i> فاتورة جديدة</button>
-          <button class="quick-btn" onclick="switchToTab('customers')"><i class="ti ti-user-plus"></i> العملاء</button>
-        </div>
-      </div>
+      <img id="dashLogo" src="icon-192.png" style="width:56px;height:56px;border-radius:14px;object-fit:cover;margin-bottom:12px;">
+      <h1>لوحة المتابعة</h1>
+      <p class="subtitle" id="todayDate"></p>
       <div class="cards" id="dashCards"></div>
       <div class="panel" id="lowStockPanel" style="display:none;border-color:var(--danger-bg);background:var(--danger-bg);">
         <h2 style="color:var(--danger);">⚠ منتجات على وشك النفاد</h2>
@@ -1037,12 +1008,10 @@ document.querySelectorAll('.nav-item').forEach(item=>{
 
 /* ---------- DASHBOARD ---------- */
 function renderDashboard(){
-  const sidebarName = document.getElementById('officeNameSidebarText');
-  if(sidebarName) sidebarName.textContent = settings.officeName || 'مكتب الدعاية والإعلان';
+  document.getElementById('officeNameSidebar').childNodes[0].textContent = settings.officeName + ' ';
   document.getElementById('mobileTitle').textContent = settings.officeName;
   document.getElementById('todayDate').textContent = 'بيانات محدثة حتى اليوم';
-  const dashLogo = document.getElementById('dashLogo');
-  if(dashLogo) dashLogo.src = settings.customIcon || 'icon-192.png';
+  document.getElementById('dashLogo').src = settings.customIcon || 'icon-192.png';
 
   const today = todayStr();
   const todaySales = invoices.filter(i=>i.date===today && !i.proforma).reduce((s,i)=>s+i.total,0);
