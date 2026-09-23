@@ -311,13 +311,21 @@
           </label>
         </div>
 
-        <div class="row" id="paymentMethodWrap" style="align-items:center;margin-bottom:16px;">
+        <div class="row" id="paymentMethodWrap" style="align-items:flex-start;margin-bottom:16px;">
           <div class="field" style="max-width:320px;">
             <label>طريقة الدفع</label>
             <select id="invPaymentMethod">
               <option value="نقدي">نقدي</option>
               <option value="حوالة مصرفية">حوالة مصرفية</option>
             </select>
+          </div>
+          <div class="field" id="bankDetailsWrap" style="max-width:320px;display:none;">
+            <label>اسم المصرف</label>
+            <input type="text" id="invBankName" placeholder="مثال: مصرف الجمهورية">
+          </div>
+          <div class="field" id="transferNumberWrap" style="max-width:260px;display:none;">
+            <label>رقم الحوالة</label>
+            <input type="text" id="invTransferNumber" placeholder="رقم الحوالة المصرفية">
           </div>
         </div>
 
@@ -1199,6 +1207,8 @@ async function saveInvoice(isProforma){
   const date = document.getElementById('invDate').value || todayStr();
   const isPaid = document.getElementById('invIsPaid').checked;
   const paymentMethod = isPaid ? document.getElementById('invPaymentMethod').value : '';
+  const bankName = isPaid && paymentMethod === 'حوالة مصرفية' ? document.getElementById('invBankName').value.trim() : '';
+  const transferNumber = isPaid && paymentMethod === 'حوالة مصرفية' ? document.getElementById('invTransferNumber').value.trim() : '';
   const t = computeInvoiceTotals();
 
   let invoice;
@@ -1210,6 +1220,8 @@ async function saveInvoice(isProforma){
     invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.extraCost = t.extraCost; invoice.total = t.net;
     invoice.paid = isPaid;
     invoice.paymentMethod = paymentMethod;
+    invoice.bankName = bankName;
+    invoice.transferNumber = transferNumber;
     invoice.proforma = isProforma;
     editingInvoiceNumber = null;
     document.getElementById('saveInvoiceFinalBtn').textContent = 'حفظ كفاتورة نهائية';
@@ -1223,6 +1235,8 @@ async function saveInvoice(isProforma){
       subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net,
       paid: isPaid,
       paymentMethod: paymentMethod,
+      bankName: bankName,
+      transferNumber: transferNumber,
       proforma: isProforma
     };
     invoices.push(invoice);
@@ -1244,6 +1258,8 @@ async function saveInvoice(isProforma){
   document.getElementById('invDate').value='';
   document.getElementById('invIsPaid').checked = true;
   document.getElementById('invPaymentMethod').value = 'نقدي';
+  document.getElementById('invBankName').value = '';
+  document.getElementById('invTransferNumber').value = '';
   updatePaymentMethodUI();
   renderInvoiceItemsUI();
   renderInvoicesTable();
@@ -1261,11 +1277,22 @@ function updatePaymentMethodUI(){
   const paid = document.getElementById('invIsPaid').checked;
   const wrap = document.getElementById('paymentMethodWrap');
   const select = document.getElementById('invPaymentMethod');
+  const bankWrap = document.getElementById('bankDetailsWrap');
+  const transferWrap = document.getElementById('transferNumberWrap');
+  const bankInput = document.getElementById('invBankName');
+  const transferInput = document.getElementById('invTransferNumber');
   if(!wrap || !select) return;
   wrap.style.opacity = paid ? '1' : '0.5';
   select.disabled = !paid;
   if(paid && !select.value) select.value = 'نقدي';
+  const isTransfer = paid && select.value === 'حوالة مصرفية';
+  if(bankWrap) bankWrap.style.display = isTransfer ? '' : 'none';
+  if(transferWrap) transferWrap.style.display = isTransfer ? '' : 'none';
+  if(bankInput) bankInput.disabled = !isTransfer;
+  if(transferInput) transferInput.disabled = !isTransfer;
 }
+
+document.getElementById('invPaymentMethod').addEventListener('change', updatePaymentMethodUI);
 document.getElementById('invIsPaid').addEventListener('change', updatePaymentMethodUI);
 updatePaymentMethodUI();
 
@@ -1288,6 +1315,8 @@ async function editInvoice(number){
   document.getElementById('invExtraCost').value = inv.extraCost || 0;
   document.getElementById('invIsPaid').checked = (inv.paid !== false);
   document.getElementById('invPaymentMethod').value = inv.paymentMethod || 'نقدي';
+  document.getElementById('invBankName').value = inv.bankName || '';
+  document.getElementById('invTransferNumber').value = inv.transferNumber || '';
   updatePaymentMethodUI();
   currentInvoiceItems = JSON.parse(JSON.stringify(inv.items));
   editingInvoiceNumber = number;
@@ -1408,6 +1437,8 @@ async function markDebtPaid(number){
   if(!inv) return;
   inv.paid = true;
   if(!inv.paymentMethod) inv.paymentMethod = 'نقدي';
+  if(!inv.bankName) inv.bankName = '';
+  if(!inv.transferNumber) inv.transferNumber = '';
   await Store.set('invoices', invoices);
   renderInvoicesTable();
   renderDebts();
@@ -1466,7 +1497,7 @@ function printInvoice(inv, isProforma){
     </div>
     <div style="border-bottom:2px solid #1C1B1A;margin-bottom:14px;"></div>
     <p><strong>الأخ / الأخوة:</strong> ${inv.customer}</p>
-    ${!isProforma && inv.paid !== false ? `<p><strong>طريقة الدفع:</strong> ${inv.paymentMethod || 'نقدي'}</p>` : (!isProforma ? `<p><strong>حالة الدفع:</strong> دين على العميل</p>` : '')}
+    ${!isProforma && inv.paid !== false ? `<p><strong>طريقة الدفع:</strong> ${inv.paymentMethod || 'نقدي'}</p>${(inv.paymentMethod === 'حوالة مصرفية') ? `<p><strong>اسم المصرف:</strong> ${inv.bankName || 'غير محدد'} &nbsp;&nbsp; <strong>رقم الحوالة:</strong> ${inv.transferNumber || 'غير محدد'}</p>` : ''}` : (!isProforma ? `<p><strong>حالة الدفع:</strong> دين على العميل</p>` : '')}
     <table style="width:100%;border-collapse:collapse;margin-top:14px;">
       <thead><tr style="border-bottom:2px solid #1C1B1A;"><th style="text-align:right;padding:8px;">الصنف</th><th style="text-align:right;padding:8px;">الكمية / المساحة</th><th style="text-align:right;padding:8px;">السعر</th><th style="text-align:right;padding:8px;">الإجمالي</th></tr></thead>
       <tbody>${itemsHtml}</tbody>
