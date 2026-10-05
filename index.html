@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>محاسبة ألوان للدعاية</title>
-<link rel="manifest" id="manifestLink" href="manifest.json">
+<link rel="manifest" id="manifestLink" href="/manifest.json">
 <meta name="theme-color" content="#3A1F63">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -77,13 +77,18 @@
   .quick-shortcuts-title{font-family:'Cairo',sans-serif;font-size:18px;font-weight:700;margin:0 0 12px;}
   .quick-shortcuts-group{background:rgba(255,255,255,.55);border:1px solid #e6dfed;border-radius:16px;padding:14px;margin-bottom:12px;}
   .quick-shortcuts-group-title{font-size:12px;color:var(--ink-soft);font-weight:700;margin-bottom:10px;}
-  .quick-shortcuts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;}
-  .quick-shortcut{display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:10px 12px;border:1px solid var(--line);background:#fff;border-radius:11px;font-size:13px;font-weight:600;box-shadow:0 2px 7px rgba(28,27,26,.04);}
-  .quick-shortcut i{font-size:17px;color:var(--stamp);}
+  .quick-shortcuts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+  .quick-shortcut{display:flex;align-items:center;justify-content:center;gap:9px;min-height:58px;padding:13px 12px;border:1px solid var(--line);background:#fff;border-radius:13px;font-size:15px;font-weight:700;box-shadow:0 2px 8px rgba(28,27,26,.05);}
+  .quick-shortcut i{font-size:21px;color:var(--stamp);}
   .quick-shortcut:hover{background:#f8f5ef;transform:translateY(-1px);}
   .dashboard-return{display:inline-flex;align-items:center;gap:7px;margin:0 0 18px;padding:8px 13px;border-radius:9px;background:#fff;border:1px solid var(--line);font-weight:600;color:var(--ink);}
   .dashboard-return:hover{background:#f4f2ec;}
-  @media(max-width:600px){.quick-shortcuts-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.quick-shortcut{font-size:12px;padding:9px 6px;}.main{padding:20px 16px;}}
+  .period-bar{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 4px 14px rgba(54,34,91,.05);}
+  .period-info{display:flex;align-items:center;gap:9px;font-weight:700;}
+  .period-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .period-controls select{min-width:170px;}
+  .period-note{font-size:12px;color:var(--ink-soft);margin:3px 0 0;}
+  @media(max-width:600px){.quick-shortcuts-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.quick-shortcut{font-size:14px;min-height:62px;padding:11px 6px;}.main{padding:20px 16px;}}
   .invoice-actions{display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;}
   .invoice-actions .icon-action{width:34px;height:34px;border:1px solid #e8e4dc;background:#fff;border-radius:9px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:17px;color:var(--ink-soft);}
   .invoice-actions .icon-action:hover{background:#f5f2ec;transform:translateY(-1px);}
@@ -245,6 +250,16 @@
         <div class="hero-actions">
           <button class="hero-action btn-primary" onclick="switchToTab('invoices')"><i class="ti ti-file-invoice"></i> فاتورة جديدة</button>
           <button class="hero-action" onclick="switchToTab('customers')"><i class="ti ti-users"></i> العملاء</button>
+        </div>
+      </div>
+      <div class="period-bar">
+        <div>
+          <div class="period-info">📅 الفترة الحالية: <span id="currentPeriodLabel">—</span></div>
+          <p class="period-note">الفترة الشهرية للمعاملات والتقارير. العملاء والموردون والمنتجات مشتركة بين جميع الأشهر.</p>
+        </div>
+        <div class="period-controls">
+          <select id="periodSelect" aria-label="اختيار الشهر" onchange="changePeriod(this.value)"></select>
+          <button type="button" onclick="goToCurrentMonth()">الشهر الحالي</button>
         </div>
       </div>
       <div class="cards" id="dashCards"></div>
@@ -539,7 +554,7 @@
 
       <div class="panel">
         <h2>سجل المصروفات</h2>
-        <div class="table-scroll"><table id="expensesTable"><thead><tr><th>التاريخ</th><th>الفئة</th><th>الوصف</th><th>المبلغ</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="table-scroll"><table id="expensesTable"><thead><tr><th>التاريخ</th><th>الفئة</th><th>الوصف</th><th>المبلغ</th><th>الفترة</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="expensesEmpty" style="display:none;">لا توجد مصروفات مسجلة بعد.</div>
         <div class="totals-box" id="expensesTotalsBox" style="margin-top:14px;margin-right:0;"></div>
       </div>
@@ -593,12 +608,24 @@
       <p class="subtitle">ملخص مالي عام لجميع العمليات المسجلة</p>
 
       <div class="panel">
+        <h2>الملخص السنوي</h2>
+        <p class="subtitle" style="margin-bottom:12px;">عرض إجمالي المبيعات والمشتريات والمصروفات والربح لكل شهر، مع إجمالي السنة كاملة.</p>
+        <div class="row" style="align-items:flex-end;">
+          <div class="field" style="max-width:150px;"><label>السنة</label><input type="number" id="annualYear" min="2000" max="2100"></div>
+          <button type="button" class="btn-primary" id="annualSummaryBtn">عرض الملخص السنوي</button>
+        </div>
+        <div id="annualSummaryBox" style="margin-top:16px;"></div>
+      </div>
+
+      <div class="panel">
         <h2>تصفية حسب التاريخ</h2>
-        <p class="subtitle" style="margin-bottom:12px;">تنطبق على كل التقارير أدناه بما فيها ملفات PDF المصدَّرة. اتركهما فارغين لعرض كل البيانات.</p>
+        <p class="subtitle" style="margin-bottom:12px;">تنطبق على كل التقارير أدناه. عند ترك التاريخين فارغين يتم استخدام الشهر المحدد، ويمكنك اختيار شهر أو سنة أو فترة مخصصة.</p>
         <div class="row" style="align-items:flex-end;">
           <div class="field" style="max-width:170px;"><label>من تاريخ</label><input type="date" id="reportFromDate"></div>
           <div class="field" style="max-width:170px;"><label>إلى تاريخ</label><input type="date" id="reportToDate"></div>
           <button class="btn-primary" id="applyReportFilterBtn">تطبيق الفلتر</button>
+          <button type="button" onclick="setReportSelectedMonth()">الشهر المحدد</button>
+          <button type="button" onclick="setReportYear()">السنة الحالية</button>
           <button id="clearReportFilterBtn">إلغاء الفلتر</button>
         </div>
       </div>
@@ -699,6 +726,22 @@
         </div>
         <p class="subtitle" style="margin-top:10px;">تنبيه: استيراد نسخة احتياطية سيستبدل كل البيانات الحالية في البرنامج.</p>
       </div>
+      <div class="panel">
+        <h2>إدارة السنة المالية</h2>
+        <p class="subtitle" style="margin-bottom:14px;">إقفال السنة يحفظ بياناتها كاملة، ويمنع تعديل معاملاتها. يمكنك العودة إليها للعرض والتقارير في أي وقت. العملاء والموردون والمنتجات تبقى مشتركة بين السنوات.</p>
+        <div class="row" style="align-items:center;">
+          <div class="field" style="max-width:150px;"><label>السنة الحالية</label><input type="number" id="closeYear" min="2000" max="2100"></div>
+          <button type="button" class="btn-primary" id="closeYearBtn">إقفال السنة</button>
+          <button type="button" id="reopenYearBtn">إعادة فتح السنة</button>
+        </div>
+        <div class="row" style="align-items:center;margin-top:12px;">
+          <div class="field" style="max-width:150px;"><label>السنة الجديدة</label><input type="number" id="newFinancialYear" min="2000" max="2100"></div>
+          <button type="button" class="btn-primary" id="startNewYearBtn">بدء سنة مالية جديدة</button>
+          <button type="button" id="viewPreviousYearBtn">العودة للسنة السابقة</button>
+        </div>
+        <div id="closedYearStatus" class="subtitle" style="margin-top:10px;margin-bottom:0;"></div>
+      </div>
+
     </section>
 
   </div>
@@ -788,6 +831,7 @@ async function applyIncomingCloudData(data){
   document.getElementById('setLowStockThreshold').value = (typeof settings.lowStockThreshold === 'number') ? settings.lowStockThreshold : 5;
 
   renderDashboard();
+  refreshPeriodSelector();
   renderInvoiceItemsUI();
   renderInvoicesTable();
   renderPurchasesTable();
@@ -864,8 +908,49 @@ let invoices = [];
 let customers = [];
 let expenses = [];
 let suppliers = [];
-let settings = { officeName: 'ألوان للدعاية', phone: '', address: '', currency: 'ر.س' };
+let settings = { officeName: 'ألوان للدعاية', phone: '', address: '', currency: 'ر.س', currentFinancialYear: new Date().getFullYear(), closedYears: [], invoiceCountersByYear: {} };
 let invoiceCounter = 1;
+let selectedPeriod = ''; // YYYY-MM; 'ALL' means all months
+
+function currentMonthKey(){ return todayStr().slice(0,7); }
+function monthLabel(key){
+  if(key==='ALL') return 'الكل';
+  if(!key) return '';
+  const [y,m]=key.split('-').map(Number);
+  return new Date(y,m-1,1).toLocaleDateString('ar-EG',{month:'long',year:'numeric'});
+}
+function transactionInSelectedPeriod(dateStr){ return !!dateStr && (selectedPeriod==='ALL' || !selectedPeriod || dateStr.slice(0,7)===selectedPeriod); }
+function selectedPeriodStart(){ return selectedPeriod==='ALL' || !selectedPeriod ? '0000-01-01' : selectedPeriod+'-01'; }
+function selectedPeriodEnd(){
+  if(selectedPeriod==='ALL' || !selectedPeriod) return '9999-12-31';
+  const [y,m]=selectedPeriod.split('-').map(Number);
+  return new Date(y,m,0).toISOString().slice(0,10);
+}
+function refreshPeriodSelector(){
+  const el=document.getElementById('periodSelect');
+  if(!el) return;
+  const keys=new Set(['ALL', currentMonthKey(), selectedPeriod]);
+  [...invoices,...purchases,...expenses].forEach(x=>{ if(x.date) keys.add(x.date.slice(0,7)); });
+  const sorted=[...keys].filter(Boolean).sort((a,b)=>{ if(a==='ALL') return -1; if(b==='ALL') return 1; return b.localeCompare(a); });
+  el.innerHTML=sorted.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('');
+  el.value=selectedPeriod || currentMonthKey();
+  const label=document.getElementById('currentPeriodLabel');
+  if(label) label.textContent=monthLabel(el.value);
+}
+async function changePeriod(key){
+  selectedPeriod = (key === 'ALL') ? 'ALL' : (key || currentMonthKey());
+  settings.selectedPeriod=selectedPeriod;
+  await Store.set('settings',settings);
+  refreshPeriodSelector();
+  setNewEntryDates();
+  renderDashboard(); renderInvoicesTable(); renderPurchasesTable(); renderExpensesTable(); renderDebts();
+  if(document.getElementById('tab-reports').style.display!=='none') renderAllReports();
+}
+function goToCurrentMonth(){ changePeriod(currentMonthKey()); }
+function setNewEntryDates(){
+  const d=(selectedPeriod==='ALL' || selectedPeriod===currentMonthKey()) ? todayStr() : selectedPeriod+'-01';
+  ['invDate','pDate','expDate'].forEach(id=>{ const el=document.getElementById(id); if(el && !el.value) el.value=d; });
+}
 
 let currentInvoiceItems = []; // {type, id, name, qty, unitPrice, width, height, area, printCost, lineTotal}
 
@@ -875,6 +960,27 @@ function fmt(n){
 }
 function todayStr(){
   return new Date().toISOString().slice(0,10);
+}
+function currentFinancialYear(){ return Number(settings.currentFinancialYear) || new Date().getFullYear(); }
+function isYearClosed(year){ return (Array.isArray(settings.closedYears)?settings.closedYears:[]).includes(String(year)); }
+function dateYear(dateStr){ return Number(String(dateStr||'').slice(0,4)) || currentFinancialYear(); }
+function canModifyDate(dateStr){
+  const y=dateYear(dateStr);
+  if(isYearClosed(y)){ alert('السنة المالية '+y+' مقفلة. يمكنك الرجوع إليها للعرض والتقارير فقط، ولا يمكن تعديل معاملاتها.'); return false; }
+  return true;
+}
+function nextInvoiceNumberForYear(year){
+  const y=String(year);
+  const counters=settings.invoiceCountersByYear || (settings.invoiceCountersByYear={});
+  let n=Number(counters[y])||0;
+  const maxExisting=invoices.filter(i=>dateYear(i.date)===Number(year)).reduce((m,i)=>Math.max(m,Number(i.number)||0),0);
+  n=Math.max(n,maxExisting)+1;
+  counters[y]=n;
+  return n;
+}
+function setInvoiceCounterForYear(year, usedNumber){
+  settings.invoiceCountersByYear=settings.invoiceCountersByYear||{};
+  settings.invoiceCountersByYear[String(year)]=Math.max(Number(settings.invoiceCountersByYear[String(year)])||0, Number(usedNumber)||0);
 }
 
 async function loadAll(){
@@ -886,7 +992,24 @@ async function loadAll(){
   expenses = await Store.get('expenses', []);
   suppliers = await Store.get('suppliers', []);
   settings = await Store.get('settings', settings);
+  const cm = currentMonthKey();
+  if(settings.periodAutoMonth !== cm){
+    selectedPeriod = cm;
+    settings.selectedPeriod = cm;
+    settings.periodAutoMonth = cm;
+  } else {
+    selectedPeriod = settings.selectedPeriod || cm;
+    if(selectedPeriod!=='ALL' && !/^\d{4}-\d{2}$/.test(selectedPeriod)) selectedPeriod = cm;
+  }
   invoiceCounter = await Store.get('invoiceCounter', 1);
+  settings.currentFinancialYear = Number(settings.currentFinancialYear) || Number(cm.slice(0,4));
+  settings.closedYears = Array.isArray(settings.closedYears) ? settings.closedYears : [];
+  settings.invoiceCountersByYear = settings.invoiceCountersByYear || {};
+  if(!settings.invoiceCountersByYear[String(settings.currentFinancialYear)]){
+    const maxOld=invoices.filter(i=>dateYear(i.date)===settings.currentFinancialYear).reduce((m,i)=>Math.max(m,Number(i.number)||0),0);
+    settings.invoiceCountersByYear[String(settings.currentFinancialYear)] = Math.max(maxOld, Number(invoiceCounter)-1, 0);
+  }
+  await Store.set('settings', settings);
 
   if(products.length === 0 && meterTypes.length === 0){
     // seed sample catalog so the app isn't empty on first run
@@ -1083,15 +1206,16 @@ function renderDashboard(){
   const today = todayStr();
   const todaySales = invoices.filter(i=>i.date===today && !i.proforma).reduce((s,i)=>s+i.total,0);
   const todayPurchases = purchases.filter(p=>p.date===today).reduce((s,p)=>s+p.total,0);
-  const monthPrefix = today.slice(0,7);
-  const monthSales = invoices.filter(i=>i.date && i.date.slice(0,7)===monthPrefix && !i.proforma).reduce((s,i)=>s+i.total,0);
-  const monthPurchases = purchases.filter(p=>p.date && p.date.slice(0,7)===monthPrefix).reduce((s,p)=>s+p.total,0);
+  const monthPrefix = selectedPeriod==='ALL' ? 'ALL' : (selectedPeriod || currentMonthKey());
+  const monthSales = invoices.filter(i=>transactionInSelectedPeriod(i.date) && !i.proforma).reduce((s,i)=>s+i.total,0);
+  const monthPurchases = purchases.filter(p=>transactionInSelectedPeriod(p.date)).reduce((s,p)=>s+p.total,0);
+  refreshPeriodSelector();
 
   const cards = [
     {label:'مبيعات اليوم', value: fmt(todaySales), icon:'ti-cash', bg:'#EAF3DE', fg:'#3B6D11'},
     {label:'مشتريات اليوم', value: fmt(todayPurchases), icon:'ti-shopping-cart', bg:'#F3E9D2', fg:'#9C7A28'},
     {label:'عدد الفواتير', value: invoices.length, icon:'ti-file-invoice', bg:'#EEEDFE', fg:'#534AB7'},
-    {label:'صافي الشهر', value: fmt(monthSales - monthPurchases), icon:'ti-chart-bar', bg:'#E1F5EE', fg:'#0F6E56'},
+    {label:selectedPeriod==='ALL'?'صافي الفترة':'صافي الشهر', value: fmt(monthSales - monthPurchases), icon:'ti-chart-bar', bg:'#E1F5EE', fg:'#0F6E56'},
     {label:'ديون مستحقة', value: fmt(invoices.filter(i=>i.paid===false && !i.proforma).reduce((s,i)=>s+i.total,0)), icon:'ti-alert-circle', bg:'#FCEBEB', fg:'#A32D2D'}
   ];
   document.getElementById('dashCards').innerHTML = cards.map(c=>`
@@ -1136,7 +1260,7 @@ function renderSalesChart(){
     const d = new Date();
     d.setDate(d.getDate()-i);
     const key = d.toISOString().slice(0,10);
-    const total = invoices.filter(inv=>inv.date===key && !inv.proforma).reduce((s,inv)=>s+inv.total,0);
+    const total = invoices.filter(inv=>inv.date===key && transactionInSelectedPeriod(inv.date) && !inv.proforma).reduce((s,inv)=>s+inv.total,0);
     days.push({label: d.toLocaleDateString('ar-EG',{weekday:'short'}), total});
   }
   const maxVal = Math.max(...days.map(d=>d.total), 1);
@@ -1271,7 +1395,8 @@ async function saveInvoice(isProforma){
     if(stockError){ alert(stockError); return; }
   }
 
-  const date = document.getElementById('invDate').value || todayStr();
+  const date = document.getElementById('invDate').value || ((selectedPeriod==='ALL' || selectedPeriod===currentMonthKey()) ? todayStr() : selectedPeriod+'-01');
+  if(!canModifyDate(date)) return;
   const isPaid = document.getElementById('invIsPaid').checked;
   const paymentMethod = isPaid ? document.getElementById('invPaymentMethod').value : '';
   const bankName = isPaid && paymentMethod === 'حوالة مصرفية' ? document.getElementById('invBankName').value.trim() : '';
@@ -1296,7 +1421,7 @@ async function saveInvoice(isProforma){
     document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
   } else {
     invoice = {
-      number: invoiceCounter,
+      number: nextInvoiceNumberForYear(dateYear(date)),
       customer, date,
       items: JSON.parse(JSON.stringify(currentInvoiceItems)),
       subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net,
@@ -1307,8 +1432,10 @@ async function saveInvoice(isProforma){
       proforma: isProforma
     };
     invoices.push(invoice);
-    invoiceCounter += 1;
+    setInvoiceCounterForYear(dateYear(date), invoice.number);
+    invoiceCounter = invoice.number + 1;
     await Store.set('invoiceCounter', invoiceCounter);
+    await Store.set('settings', settings);
   }
 
   if(!isProforma){
@@ -1369,6 +1496,7 @@ document.getElementById('saveInvoiceProformaBtn').addEventListener('click', ()=>
 async function editInvoice(number){
   const inv = invoices.find(i=>i.number===number);
   if(!inv) return;
+  if(!canModifyDate(inv.date)) return;
   // temporarily give back the stock reserved by this invoice so it can be re-validated/re-edited
   // (skip for proforma invoices — they never touched stock in the first place)
   if(!inv.proforma){
@@ -1422,6 +1550,7 @@ document.getElementById('cancelInvoiceEditBtn').addEventListener('click', cancel
 async function deleteInvoice(number){
   if(!(await confirmDelete('حذف الفاتورة رقم #' + number + '؟', 'سيتم إرجاع كمية المنتجات المباعة فيها إلى المخزون (إن وجدت).'))) return;
   const inv = invoices.find(i=>i.number===number);
+  if(inv && !canModifyDate(inv.date)) return;
   if(inv && !inv.proforma){
     restoreStock(inv.items);
     await Store.set('products', products);
@@ -1462,7 +1591,7 @@ function shareInvoiceWhatsapp(number){
 
 function renderInvoicesTable(){
   const tbody = document.querySelector('#invoicesTable tbody');
-  const sorted = [...invoices].sort((a,b)=>b.number-a.number);
+  const sorted = invoices.filter(i=>transactionInSelectedPeriod(i.date)).sort((a,b)=>b.number-a.number);
   tbody.innerHTML = sorted.map(i=>{
     const paid = i.paid !== false;
     let badge = paid
@@ -1515,21 +1644,21 @@ async function markDebtPaid(number){
 }
 
 function renderDebts(){
-  const unpaid = invoices.filter(i=>i.paid===false && !i.proforma).sort((a,b)=>b.number-a.number);
-  const totalDebt = unpaid.reduce((s,i)=>s+i.total,0);
-
-  document.getElementById('debtsCards').innerHTML = `
-    <div class="stat-card"><div class="label">عدد الفواتير غير المدفوعة</div><div class="value">${unpaid.length}</div></div>
-    <div class="stat-card"><div class="label">إجمالي الديون المستحقة</div><div class="value">${fmt(totalDebt)}</div></div>
-  `;
-
-  document.querySelector('#debtsTable tbody').innerHTML = unpaid.map(i=>`
-    <tr>
-      <td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td>
-      <td><button class="btn-primary" onclick="markDebtPaid(${i.number})">تحديد كمدفوعة</button></td>
-    </tr>
-  `).join('');
-  document.getElementById('debtsEmpty').style.display = unpaid.length? 'none':'block';
+  const start=selectedPeriodStart();
+  const end=selectedPeriodEnd();
+  const currentUnpaid=invoices.filter(i=>i.date>=start && i.date<=end && i.paid===false && !i.proforma).sort((a,b)=>b.number-a.number);
+  const carriedUnpaid=invoices.filter(i=>i.date<start && i.paid===false && !i.proforma).sort((a,b)=>b.number-a.number);
+  const allUnpaid=[...currentUnpaid,...carriedUnpaid];
+  const totalDebt=allUnpaid.reduce((s,i)=>s+i.total,0);
+  const carriedTotal=carriedUnpaid.reduce((s,i)=>s+i.total,0);
+  document.getElementById('debtsCards').innerHTML=`
+    <div class="stat-card"><div class="label">${selectedPeriod==='ALL'?'الديون المستحقة':'ديون الشهر المحدد'}</div><div class="value">${fmt(currentUnpaid.reduce((s,i)=>s+i.total,0))}</div></div>
+    <div class="stat-card"><div class="label">رصيد مرحل من أشهر سابقة</div><div class="value">${fmt(carriedTotal)}</div></div>
+    <div class="stat-card"><div class="label">إجمالي الديون المستحقة</div><div class="value">${fmt(totalDebt)}</div></div>`;
+  document.querySelector('#debtsTable tbody').innerHTML=allUnpaid.map(i=>`
+    <tr><td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td><td>${selectedPeriod==='ALL'?'مستحقة':(i.date<start?'مرحل':'هذا الشهر')}</td>
+      <td><button class="btn-primary" onclick="markDebtPaid(${i.number})">تحديد كمدفوعة</button></td></tr>`).join('');
+  document.getElementById('debtsEmpty').style.display=allUnpaid.length?'none':'block';
 }
 
 function printInvoice(inv, isProforma){
@@ -1587,7 +1716,7 @@ function printInvoice(inv, isProforma){
 /* ---------- PDF EXPORTS: PURCHASES & SALES REPORTS ---------- */
 function printPurchasesReport(){
   if(purchases.length === 0){ alert('لا توجد مشتريات لتصديرها.'); return; }
-  const sorted = [...purchases].sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+  const sorted = purchases.filter(p=>transactionInSelectedPeriod(p.date)).sort((a,b)=> (a.date||'').localeCompare(b.date||''));
   const rowsHtml = sorted.map(p=>`
     <tr><td>${p.date}</td><td>${p.supplier}</td><td>${p.item}</td><td>${p.qty}</td><td>${fmt(p.unitCost)}</td><td>${fmt(p.total)}</td></tr>
   `).join('');
@@ -1686,7 +1815,8 @@ async function addPurchase(){
   const item = document.getElementById('pItem').value.trim();
   const qty = Number(document.getElementById('pQty').value)||0;
   const unitCost = Number(document.getElementById('pUnitCost').value)||0;
-  const date = document.getElementById('pDate').value || todayStr();
+  const date = document.getElementById('pDate').value || ((selectedPeriod==='ALL' || selectedPeriod===currentMonthKey()) ? todayStr() : selectedPeriod+'-01');
+  if(!canModifyDate(date)) return;
   if(!supplier || !item){ alert('أدخل اسم المورد والصنف.'); return; }
 
   if(editingPurchaseId){
@@ -1753,6 +1883,7 @@ document.getElementById('cancelPurchaseEditBtn').addEventListener('click', cance
 async function deletePurchase(id){
   if(!(await confirmDelete('حذف عملية الشراء؟', 'سيتم خصم كميتها من مخزون المنتج المرتبط.'))) return;
   const p = purchases.find(x=>x.id===id);
+  if(p && !canModifyDate(p.date)) return;
   if(p){
     const product = products.find(x=>x.name.trim().toLowerCase()===p.item.trim().toLowerCase());
     if(product){ product.stock = Math.max(0, (product.stock||0) - p.qty); }
@@ -2064,7 +2195,8 @@ async function addExpense(){
   const category = document.getElementById('expCategory').value;
   const description = document.getElementById('expDescription').value.trim();
   const amount = Number(document.getElementById('expAmount').value)||0;
-  const date = document.getElementById('expDate').value || todayStr();
+  const date = document.getElementById('expDate').value || ((selectedPeriod==='ALL' || selectedPeriod===currentMonthKey()) ? todayStr() : selectedPeriod+'-01');
+  if(!canModifyDate(date)) return;
   if(!description){ alert('أدخل وصف المصروف.'); return; }
 
   if(editingExpenseId){
@@ -2110,6 +2242,8 @@ document.getElementById('cancelExpenseEditBtn').addEventListener('click', cancel
 
 async function deleteExpense(id){
   if(!(await confirmDelete('حذف هذا المصروف؟', 'لا يمكن التراجع عن هذا الإجراء.'))) return;
+  const ex = expenses.find(x=>x.id===id);
+  if(ex && !canModifyDate(ex.date)) return;
   expenses = expenses.filter(e=>e.id!==id);
   await Store.set('expenses', expenses);
   renderExpensesTable();
@@ -2117,7 +2251,7 @@ async function deleteExpense(id){
 
 function renderExpensesTable(){
   const tbody = document.querySelector('#expensesTable tbody');
-  const sorted = [...expenses].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  const sorted = expenses.filter(e=>transactionInSelectedPeriod(e.date)).sort((a,b)=> (b.date||'').localeCompare(a.date||''));
   tbody.innerHTML = sorted.map(e=>`
     <tr><td>${e.date}</td><td>${e.category}</td><td>${e.description}</td><td>${fmt(e.amount)}</td>
     <td>
@@ -2127,7 +2261,7 @@ function renderExpensesTable(){
   `).join('');
   document.getElementById('expensesEmpty').style.display = sorted.length? 'none':'block';
 
-  const total = expenses.reduce((s,e)=>s+e.amount,0);
+  const total = expenses.filter(e=>transactionInSelectedPeriod(e.date)).reduce((s,e)=>s+e.amount,0);
   document.getElementById('expensesTotalsBox').innerHTML = `
     <div class="line final"><span>إجمالي المصروفات</span><span>${fmt(total)}</span></div>
   `;
@@ -2242,9 +2376,122 @@ function renderMeterTable(){
 function inReportDateRange(dateStr){
   const from = document.getElementById('reportFromDate').value;
   const to = document.getElementById('reportToDate').value;
-  if(from && (dateStr||'') < from) return false;
-  if(to && (dateStr||'') > to) return false;
-  return true;
+  if(from || to){
+    if(from && (dateStr||'') < from) return false;
+    if(to && (dateStr||'') > to) return false;
+    return true;
+  }
+  return transactionInSelectedPeriod(dateStr);
+}
+
+function setReportSelectedMonth(){
+  if(selectedPeriod==='ALL'){
+    document.getElementById('reportFromDate').value='';
+    document.getElementById('reportToDate').value='';
+  } else {
+    document.getElementById('reportFromDate').value=selectedPeriod+'-01';
+    document.getElementById('reportToDate').value=selectedPeriodEnd();
+  }
+  renderAllReports();
+}
+function setReportYear(){
+  const y=(selectedPeriod==='ALL'?currentMonthKey():selectedPeriod).slice(0,4);
+  document.getElementById('reportFromDate').value=y+'-01-01';
+  document.getElementById('reportToDate').value=y+'-12-31';
+  renderAllReports();
+}
+
+function annualSummary(year){
+  const y=String(year);
+  const rows=[];
+  let totals={sales:0,purchases:0,expenses:0,profit:0};
+  for(let m=1;m<=12;m++){
+    const key=y+'-'+String(m).padStart(2,'0');
+    const sales=invoices.filter(i=>!i.proforma && i.date && i.date.slice(0,7)===key).reduce((s,i)=>s+Number(i.total||0),0);
+    const purchasesTotal=purchases.filter(i=>i.date && i.date.slice(0,7)===key).reduce((s,i)=>s+Number(i.total||0),0);
+    const expensesTotal=expenses.filter(i=>i.date && i.date.slice(0,7)===key).reduce((s,i)=>s+Number(i.amount||0),0);
+    const printCost=invoices.filter(i=>!i.proforma && i.date && i.date.slice(0,7)===key).reduce((s,i)=>s+Number(i.printCost||0),0);
+    const extra=invoices.filter(i=>!i.proforma && i.date && i.date.slice(0,7)===key).reduce((s,i)=>s+Number(i.extraCost||0),0);
+    const profit=sales-purchasesTotal-expensesTotal-printCost-extra;
+    rows.push({month:monthLabel(key),sales,purchases:purchasesTotal,expenses:expensesTotal,profit});
+    totals.sales+=sales; totals.purchases+=purchasesTotal; totals.expenses+=expensesTotal; totals.profit+=profit;
+  }
+  const box=document.getElementById('annualSummaryBox');
+  if(!box) return;
+  box.innerHTML=`<div class="cards" style="margin-bottom:16px;">
+    <div class="stat-card"><div class="label">مبيعات السنة</div><div class="value">${fmt(totals.sales)}</div></div>
+    <div class="stat-card"><div class="label">مشتريات السنة</div><div class="value">${fmt(totals.purchases)}</div></div>
+    <div class="stat-card"><div class="label">مصروفات السنة</div><div class="value">${fmt(totals.expenses)}</div></div>
+    <div class="stat-card"><div class="label">صافي ربح السنة</div><div class="value">${fmt(totals.profit)}</div></div>
+  </div><div class="table-scroll"><table><thead><tr><th>الشهر</th><th>المبيعات</th><th>المشتريات</th><th>المصروفات</th><th>الربح التقديري</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.month}</td><td>${fmt(r.sales)}</td><td>${fmt(r.purchases)}</td><td>${fmt(r.expenses)}</td><td>${fmt(r.profit)}</td></tr>`).join('')}</tbody><tfoot><tr><th>إجمالي ${y}</th><th>${fmt(totals.sales)}</th><th>${fmt(totals.purchases)}</th><th>${fmt(totals.expenses)}</th><th>${fmt(totals.profit)}</th></tr></tfoot></table></div>`;
+}
+
+function updateClosedYearStatus(){
+  const y=currentFinancialYear();
+  const el=document.getElementById('closedYearStatus');
+  if(!el) return;
+  const years=Array.isArray(settings.closedYears)?settings.closedYears:[];
+  el.textContent=(years.length ? 'السنوات المقفلة: '+years.join('، ')+' — ' : '')+'السنة المالية الحالية: '+y;
+  const cy=document.getElementById('closeYear'); if(cy) cy.value=y;
+  const ny=document.getElementById('newFinancialYear'); if(ny && !ny.value) ny.value=y+1;
+}
+async function closeFinancialYear(){
+  const y=String(document.getElementById('closeYear').value || currentFinancialYear());
+  if(!/^\d{4}$/.test(y)) return alert('أدخل سنة صحيحة.');
+  if(Number(y)!==currentFinancialYear()) return alert('يرجى إقفال السنة المالية الحالية أولاً: '+currentFinancialYear());
+  if(isYearClosed(y)) return alert('هذه السنة مقفلة بالفعل.');
+  if(!confirm('سيتم إقفال السنة '+y+' ومنع تعديل فواتيرها ومشترياتها ومصروفاتها. ستبقى جميع البيانات متاحة للعرض والتقارير. هل تريد المتابعة؟')) return;
+  settings.closedYears=Array.isArray(settings.closedYears)?settings.closedYears:[];
+  if(!settings.closedYears.includes(y)) settings.closedYears.push(y);
+  settings.closedYears.sort();
+  await Store.set('settings',settings);
+  updateClosedYearStatus();
+  alert('تم إقفال السنة '+y+'. يمكنك بدء سنة جديدة، وستبقى السنة السابقة متاحة للرجوع إليها.');
+}
+async function reopenFinancialYear(){
+  const y=String(document.getElementById('closeYear').value || currentFinancialYear());
+  settings.closedYears=Array.isArray(settings.closedYears)?settings.closedYears:[];
+  if(!settings.closedYears.includes(y)) return alert('هذه السنة ليست مقفلة.');
+  if(!confirm('إعادة فتح السنة '+y+' ستسمح بتعديل معاملاتها مرة أخرى. هل تريد المتابعة؟')) return;
+  settings.closedYears=settings.closedYears.filter(x=>x!==y);
+  await Store.set('settings',settings);
+  updateClosedYearStatus();
+  alert('تمت إعادة فتح السنة '+y+'.');
+}
+async function startNewFinancialYear(){
+  const oldYear=currentFinancialYear();
+  const y=String(document.getElementById('newFinancialYear').value || (oldYear+1));
+  if(!/^\d{4}$/.test(y)) return alert('أدخل سنة صحيحة.');
+  if(Number(y)<=oldYear) return alert('السنة الجديدة يجب أن تكون بعد السنة الحالية '+oldYear+'.');
+  if(!isYearClosed(String(oldYear))) return alert('يجب إقفال السنة '+oldYear+' أولاً قبل بدء السنة الجديدة.');
+  if(isYearClosed(y)) return alert('السنة '+y+' مقفلة بالفعل.');
+  if(!confirm('بدء السنة المالية '+y+'؟ ستبدأ أرقام الفواتير من 1، وتبدأ تقارير السنة الجديدة من بياناتها فقط، بينما تبقى سنواتك السابقة محفوظة ويمكن الرجوع إليها.')) return;
+  settings.currentFinancialYear=Number(y);
+  settings.invoiceCountersByYear=settings.invoiceCountersByYear||{};
+  if(!settings.invoiceCountersByYear[y]) settings.invoiceCountersByYear[y]=0;
+  selectedPeriod=y+'-01';
+  settings.selectedPeriod=selectedPeriod;
+  invoiceCounter=1;
+  await Store.set('invoiceCounter',invoiceCounter);
+  await Store.set('settings',settings);
+  refreshPeriodSelector();
+  setNewEntryDates();
+  renderDashboard(); renderInvoicesTable(); renderPurchasesTable(); renderExpensesTable(); renderDebts();
+  if(document.getElementById('tab-reports').style.display!=='none') renderAllReports();
+  updateInvoiceNumberBadge();
+  updateClosedYearStatus();
+  alert('تم بدء السنة المالية '+y+'. رقم أول فاتورة سيكون 1.');
+}
+async function viewPreviousFinancialYear(){
+  const years=[...new Set([...invoices,...purchases,...expenses].map(x=>dateYear(x.date)).filter(Boolean))].sort((a,b)=>b-a);
+  const prev=years.find(y=>y<currentFinancialYear());
+  if(!prev) return alert('لا توجد سنة مالية سابقة تحتوي على بيانات.');
+  selectedPeriod=String(prev)+'-01';
+  settings.selectedPeriod=selectedPeriod;
+  await Store.set('settings',settings);
+  refreshPeriodSelector(); renderDashboard(); renderInvoicesTable(); renderPurchasesTable(); renderExpensesTable(); renderDebts();
+  if(document.getElementById('tab-reports').style.display!=='none') renderAllReports();
+  alert('تم الانتقال للعرض على سنة '+prev+'. يمكنك العودة للسنة الحالية من قائمة الأشهر.');
 }
 
 function renderAllReports(){
@@ -2652,8 +2899,9 @@ document.getElementById('applyIconBtn').addEventListener('click', async ()=>{
 /* ---------- BACKUP EXPORT / IMPORT ---------- */
 function exportBackup(){
   const backup = {
+    backupVersion: 2,
     exportedAt: new Date().toISOString(),
-    products, meterTypes, purchases, invoices, settings, invoiceCounter
+    products, meterTypes, purchases, invoices, customers, expenses, suppliers, settings, invoiceCounter
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -2684,6 +2932,9 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
     meterTypes = Array.isArray(data.meterTypes) ? data.meterTypes : [];
     purchases = Array.isArray(data.purchases) ? data.purchases : [];
     invoices = Array.isArray(data.invoices) ? data.invoices : [];
+    customers = Array.isArray(data.customers) ? data.customers : [];
+    expenses = Array.isArray(data.expenses) ? data.expenses : [];
+    suppliers = Array.isArray(data.suppliers) ? data.suppliers : [];
     settings = data.settings || settings;
     invoiceCounter = Number(data.invoiceCounter) || 1;
 
@@ -2691,6 +2942,9 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
     await Store.set('meterTypes', meterTypes);
     await Store.set('purchases', purchases);
     await Store.set('invoices', invoices);
+    await Store.set('customers', customers);
+    await Store.set('expenses', expenses);
+    await Store.set('suppliers', suppliers);
     await Store.set('settings', settings);
     await Store.set('invoiceCounter', invoiceCounter);
 
@@ -2717,12 +2971,17 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
 /* ---------- INIT ---------- */
 async function init(){
   await loadAll();
+  refreshPeriodSelector();
   document.getElementById('setOfficeName').value = settings.officeName;
   document.getElementById('setPhone').value = settings.phone;
   document.getElementById('setAddress').value = settings.address;
   document.getElementById('setCurrency').value = settings.currency || 'ر.س';
   document.getElementById('setLowStockThreshold').value = (typeof settings.lowStockThreshold === 'number') ? settings.lowStockThreshold : 5;
-  document.getElementById('invDate').value = todayStr();
+  const yr=new Date().getFullYear();
+  document.getElementById('annualYear').value=yr;
+  document.getElementById('closeYear').value=yr;
+  updateClosedYearStatus();
+  setNewEntryDates();
   if(settings.customIcon){ applyCustomIcon(settings.customIcon); }
 
   let alreadyUnlocked = false;
@@ -2748,11 +3007,17 @@ async function init(){
   updateInvoiceNumberBadge();
   initCloudSync();
 }
+document.getElementById('annualSummaryBtn').addEventListener('click', ()=>annualSummary(document.getElementById('annualYear').value || new Date().getFullYear()));
+document.getElementById('closeYearBtn').addEventListener('click', closeFinancialYear);
+document.getElementById('reopenYearBtn').addEventListener('click', reopenFinancialYear);
+document.getElementById('startNewYearBtn').addEventListener('click', startNewFinancialYear);
+document.getElementById('viewPreviousYearBtn').addEventListener('click', viewPreviousFinancialYear);
+
 init();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+    navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
   });
 }
 </script>
