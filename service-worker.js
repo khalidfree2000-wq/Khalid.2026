@@ -1,4 +1,4 @@
-const CACHE_NAME = 'alwan-v23-report2';
+const CACHE_NAME = 'alwan-v30-pwa';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
