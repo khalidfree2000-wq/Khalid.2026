@@ -1196,6 +1196,28 @@ document.querySelectorAll('.main > section:not(#tab-dashboard)').forEach(section
 });
 
 /* ---------- DASHBOARD ---------- */
+function calculateEstimatedGrossProfit(invoiceList){
+  let grossProfit = 0;
+  (invoiceList || []).forEach(inv=>{
+    if(!inv || inv.proforma) return;
+    (Array.isArray(inv.items) ? inv.items : []).forEach(it=>{
+      if(it.type === 'product'){
+        const product = products.find(x=>x.id===it.refId);
+        const qty = Number(it.qty)||0;
+        const price = Number(it.unitPrice)||0;
+        const cost = product ? (Number(product.cost)||0) : 0;
+        grossProfit += (price-cost)*qty;
+      } else if(it.type === 'meter'){
+        const area = (Number(it.width)||0)*(Number(it.height)||0)*(Number(it.qty)||1);
+        const price = Number(it.unitPrice)||0;
+        const printCost = Number(it.printCost)||0;
+        grossProfit += area*(price-printCost);
+      }
+    });
+  });
+  return grossProfit;
+}
+
 function renderDashboard(){
   document.getElementById('sidebarOfficeName').textContent = settings.officeName;
   document.getElementById('mobileTitle').textContent = settings.officeName;
@@ -1207,16 +1229,20 @@ function renderDashboard(){
   const todaySales = invoices.filter(i=>i.date===today && !i.proforma).reduce((s,i)=>s+i.total,0);
   const todayPurchases = purchases.filter(p=>p.date===today).reduce((s,p)=>s+p.total,0);
   const monthPrefix = selectedPeriod==='ALL' ? 'ALL' : (selectedPeriod || currentMonthKey());
-  const monthSales = invoices.filter(i=>transactionInSelectedPeriod(i.date) && !i.proforma).reduce((s,i)=>s+i.total,0);
-  const monthPurchases = purchases.filter(p=>transactionInSelectedPeriod(p.date)).reduce((s,p)=>s+p.total,0);
+  const periodInvoices = invoices.filter(i=>transactionInSelectedPeriod(i.date) && !i.proforma);
+  const monthSales = periodInvoices.reduce((s,i)=>s+(Number(i.total)||0),0);
+  const monthPurchases = purchases.filter(p=>transactionInSelectedPeriod(p.date)).reduce((s,p)=>s+(Number(p.total)||0),0);
+  const periodExpenses = expenses.filter(e=>transactionInSelectedPeriod(e.date)).reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const periodExtraCosts = periodInvoices.reduce((s,i)=>s+(Number(i.extraCost)||0),0);
+  const estimatedNetProfit = calculateEstimatedGrossProfit(periodInvoices) - periodExpenses - periodExtraCosts;
   refreshPeriodSelector();
 
   const cards = [
     {label:'مبيعات اليوم', value: fmt(todaySales), icon:'ti-cash', bg:'#EAF3DE', fg:'#3B6D11'},
     {label:'مشتريات اليوم', value: fmt(todayPurchases), icon:'ti-shopping-cart', bg:'#F3E9D2', fg:'#9C7A28'},
     {label:'عدد الفواتير', value: invoices.length, icon:'ti-file-invoice', bg:'#EEEDFE', fg:'#534AB7'},
-    {label:selectedPeriod==='ALL'?'صافي الفترة':'صافي الشهر', value: fmt(monthSales - monthPurchases), icon:'ti-chart-bar', bg:'#E1F5EE', fg:'#0F6E56'},
-    {label:'ديون مستحقة', value: fmt(invoices.filter(i=>i.paid===false && !i.proforma).reduce((s,i)=>s+i.total,0)), icon:'ti-alert-circle', bg:'#FCEBEB', fg:'#A32D2D'}
+    {label:selectedPeriod==='ALL'?'صافي الربح التقديري للفترة':'صافي الربح التقديري للشهر', value: fmt(estimatedNetProfit), icon:'ti-chart-bar', bg:'#E1F5EE', fg:'#0F6E56'},
+    {label:'ديون مستحقة', value: fmt(invoices.filter(i=>i.paid===false && !i.proforma).reduce((s,i)=>s+(Number(i.total)||0),0)), icon:'ti-alert-circle', bg:'#FCEBEB', fg:'#A32D2D'}
   ];
   document.getElementById('dashCards').innerHTML = cards.map(c=>`
     <div class="stat-card">
@@ -2513,12 +2539,15 @@ function renderReports(){
   const filteredPurchases = purchases.filter(p=>inReportDateRange(p.date));
   const filteredExpenses = expenses.filter(e=>inReportDateRange(e.date));
 
-  const totalSales = filteredInvoices.reduce((s,i)=>s+i.total,0);
-  const totalPurchases = filteredPurchases.reduce((s,p)=>s+p.total,0);
-  const totalPrintCost = filteredInvoices.reduce((s,i)=>s+(i.printCost||0),0);
-  const totalExpenses = filteredExpenses.reduce((s,e)=>s+e.amount,0);
-  const totalExtraCosts = filteredInvoices.reduce((s,i)=>s+(i.extraCost||0),0);
-  const netProfit = totalSales - totalPurchases - totalPrintCost - totalExpenses - totalExtraCosts;
+  const totalSales = filteredInvoices.reduce((s,i)=>s+(Number(i.total)||0),0);
+  const totalPurchases = filteredPurchases.reduce((s,p)=>s+(Number(p.total)||0),0);
+  const totalPrintCost = filteredInvoices.reduce((s,i)=>s+(Number(i.printCost)||0),0);
+  const totalExpenses = filteredExpenses.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const totalExtraCosts = filteredInvoices.reduce((s,i)=>s+(Number(i.extraCost)||0),0);
+  // Profit is based on the costs of items actually sold. Purchases are shown separately
+  // as cash/stock movement and are not deducted again from the profit calculation.
+  const totalGrossProfit = calculateEstimatedGrossProfit(filteredInvoices);
+  const netProfit = totalGrossProfit - totalExpenses - totalExtraCosts;
 
   document.getElementById('reportCards').innerHTML = `
     <div class="stat-card"><div class="label">إجمالي المبيعات</div><div class="value">${fmt(totalSales)}</div></div>
@@ -2526,6 +2555,7 @@ function renderReports(){
     <div class="stat-card"><div class="label">تكلفة الطباعة الخارجية</div><div class="value">${fmt(totalPrintCost)}</div></div>
     <div class="stat-card"><div class="label">المصروفات التشغيلية</div><div class="value">${fmt(totalExpenses)}</div></div>
     <div class="stat-card"><div class="label">تكاليف/عمولات إضافية</div><div class="value">${fmt(totalExtraCosts)}</div></div>
+    <div class="stat-card"><div class="label">إجمالي ربح البنود المباعة</div><div class="value">${fmt(totalGrossProfit)}</div></div>
     <div class="stat-card"><div class="label">صافي الربح التقديري</div><div class="value">${fmt(netProfit)}</div></div>
   `;
 
