@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>محاسبة ألوان للدعاية</title>
-<link rel="manifest" id="manifestLink" href="/manifest.json">
+<link rel="manifest" id="manifestLink" href="./manifest.json">
 <meta name="theme-color" content="#3A1F63">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3047,7 +3047,7 @@ init();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+    navigator.serviceWorker.register('./service-worker.js').catch((err)=>{ console.warn('تعذر تسجيل خدمة العمل دون اتصال:', err); });
   });
 }
 </script>
