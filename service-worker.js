@@ -1,5 +1,5 @@
 /* Alwan v35 offline repair. Keeps the app's existing localStorage/IndexedDB untouched. */
-const CACHE_NAME = 'alwan-v35-pwa-repair-1';
+const CACHE_NAME = 'alwan-v35-pwa-repair-2';
 const APP_PREFIX = 'alwan-v35-pwa';
 const APP_FILES = [
   './',

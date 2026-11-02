@@ -222,6 +222,7 @@
       <div class="nav-caption">الرئيسية</div>
       <div class="nav-item active" data-tab="dashboard"><i class="ti ti-layout-dashboard"></i><span>لوحة المتابعة</span></div>
       <div class="nav-item" data-tab="calculator"><i class="ti ti-calculator"></i><span>الآلة الحاسبة</span></div>
+      <div class="nav-item" data-tab="measures"><i class="ti ti-ruler-measure"></i><span>قياسات الأبواب</span></div>
       <div class="nav-caption">المبيعات والمخزون</div>
       <div class="nav-item" data-tab="invoices"><i class="ti ti-file-invoice"></i><span>الفواتير</span></div>
       <div class="nav-item" data-tab="customers"><i class="ti ti-users"></i><span>العملاء</span></div>
@@ -342,6 +343,46 @@
           <button onclick="calcInputDigit('.')">.</button>
         </div>
       </div>
+    </section>
+
+    <section id="tab-measures" style="display:none;">
+      <h1>قياسات الأبواب والواجهات</h1>
+      <p class="subtitle">ارسم القياسات بالسنتيمتر واحفظها لكل مكان باسمه.</p>
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:2;"><label>المكان (العميل / الموقع)</label><select id="msPlace" onchange="msSelectPlace(this.value)"></select></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" onclick="msOpenForm('new')">+ مكان جديد</button>
+          <button type="button" onclick="msOpenForm('ren')">تغيير الاسم</button>
+          <button type="button" class="btn-danger-ghost" onclick="msDeletePlace()">حذف المكان</button>
+        </div>
+        <div id="msForm" class="row" style="display:none;margin-top:12px;align-items:center;">
+          <div class="field" style="margin:0;"><input id="msFormName" placeholder="اسم المكان"></div>
+          <div style="display:flex;gap:8px;"><button type="button" class="btn-stamp" onclick="msSaveForm()">حفظ</button><button type="button" onclick="msCloseForm()">إلغاء</button></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>قياس جديد</h2>
+        <div class="row">
+          <div class="field" style="flex:2;"><label>الاسم (باب، شباك، واجهة...)</label><input id="msName" placeholder="باب رئيسي"></div>
+          <div class="field"><label>العرض (سم)</label><input id="msW" type="number" inputmode="decimal" min="0" step="any"></div>
+          <div class="field"><label>الارتفاع (سم)</label><input id="msH" type="number" inputmode="decimal" min="0" step="any"></div>
+        </div>
+        <button type="button" class="btn-stamp" onclick="msAddItem()">رسم</button>
+        <div id="msMsg" style="color:var(--danger);font-size:13px;margin-top:8px;"></div>
+      </div>
+      <div class="panel" id="msTotal" style="display:none;text-align:center;">
+        <div id="msTotalLabel" style="font-size:12px;color:var(--ink-soft);"></div>
+        <div id="msTotalVal" style="font-family:'Cairo',sans-serif;font-weight:700;font-size:28px;color:var(--green);"></div>
+        <div class="row" style="justify-content:center;margin-top:12px;">
+          <div class="field" style="max-width:220px;text-align:start;"><label>سعر المتر</label><input id="msPrice" type="number" inputmode="decimal" min="0" step="any" placeholder="0" oninput="msPriceInput(this.value)"></div>
+        </div>
+        <div style="font-size:12px;color:var(--ink-soft);">الناتج = إجمالي المساحة × سعر المتر</div>
+        <div id="msResult" style="font-family:'Cairo',sans-serif;font-weight:700;font-size:28px;"></div>
+      </div>
+      <div id="msList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;"></div>
+      <p id="msEmpty" style="color:var(--ink-soft);font-size:13px;text-align:center;">أدخل القياسات واضغط «رسم»</p>
     </section>
 
     <!-- INVOICES -->
@@ -766,7 +807,7 @@ const FIREBASE_CONFIG = {
   appId: "1:347225260547:web:0a81a8790c6e267f768436"
 };
 const SYNC_CODE = "alwan-dawaya-2026-sync-x7f3q9k1";
-const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers','expenses','suppliers'];
+const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers','expenses','suppliers','measures'];
 
 let fbDb = null;
 let fbSyncEnabled = false;
@@ -789,7 +830,7 @@ async function pushToCloud(){
   if(!fbSyncEnabled || !fbDb) return;
   try{
     await fbDocRef().set({
-      products, meterTypes, purchases, invoices, customers, expenses, suppliers,
+      products, meterTypes, purchases, invoices, customers, expenses, suppliers, measures,
       settings: settingsForSync(), invoiceCounter,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -808,6 +849,7 @@ async function applyIncomingCloudData(data){
   if(data.customers) customers = data.customers;
   if(data.expenses) expenses = data.expenses;
   if(data.suppliers) suppliers = data.suppliers;
+  if(data.measures) measures = data.measures;
   if(data.settings) settings = data.settings;
   if(typeof data.invoiceCounter === 'number') invoiceCounter = data.invoiceCounter;
 
@@ -820,6 +862,7 @@ async function applyIncomingCloudData(data){
     localStorage.setItem(STORAGE_PREFIX + 'customers', JSON.stringify(customers));
     localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
     localStorage.setItem(STORAGE_PREFIX + 'suppliers', JSON.stringify(suppliers));
+    localStorage.setItem(STORAGE_PREFIX + 'measures', JSON.stringify(measures));
     localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
     localStorage.setItem(STORAGE_PREFIX + 'invoiceCounter', JSON.stringify(invoiceCounter));
   }catch(e){ console.error(e); }
@@ -843,6 +886,7 @@ async function applyIncomingCloudData(data){
   renderSuppliersTable();
   updateSuppliersDatalist();
   updateInvoiceNumberBadge();
+  if(document.getElementById('tab-measures').style.display !== 'none'){ renderMeasures(); }
   if(document.getElementById('tab-debts').style.display !== 'none'){
     renderDebts();
   }
@@ -908,6 +952,7 @@ let invoices = [];
 let customers = [];
 let expenses = [];
 let suppliers = [];
+let measures = [];
 let settings = { officeName: 'ألوان للدعاية', phone: '', address: '', currency: 'ر.س', currentFinancialYear: new Date().getFullYear(), closedYears: [], invoiceCountersByYear: {} };
 let invoiceCounter = 1;
 let selectedPeriod = ''; // YYYY-MM; 'ALL' means all months
@@ -991,6 +1036,7 @@ async function loadAll(){
   customers = await Store.get('customers', []);
   expenses = await Store.get('expenses', []);
   suppliers = await Store.get('suppliers', []);
+  measures = await Store.get('measures', []);
   settings = await Store.get('settings', settings);
   const cm = currentMonthKey();
   if(settings.periodAutoMonth !== cm){
@@ -1162,6 +1208,126 @@ function calcBackspace(){
   calcUpdateDisplay();
 }
 
+/* ---------- MEASURES (قياسات الأبواب والواجهات) ---------- */
+let msCur = null;
+let msMode = null;
+function msEsc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function msFmt(n){ return String(Math.round(n*100)/100); }
+function msEnsure(){
+  if(!Array.isArray(measures)) measures = [];
+  if(!measures.length){
+    measures.push({id:uid(), name:'مكان 1', price:'', items:[]});
+    Store.set('measures', measures);
+  }
+  if(!measures.some(p=>p.id===msCur)){
+    let saved = null;
+    try{ saved = localStorage.getItem(STORAGE_PREFIX + 'measCur'); }catch(e){}
+    msCur = measures.some(p=>p.id===saved) ? saved : measures[0].id;
+  }
+  return measures.find(p=>p.id===msCur);
+}
+function msSave(){ Store.set('measures', measures); }
+function msSvg(it){
+  const W=300,H=220,pad=44;
+  const k=Math.min((W-pad*2)/it.w,(H-pad*2)/it.h), rw=it.w*k, rh=it.h*k, x=(W-rw)/2, y=(H-rh)/2;
+  const st='font-size:17px;font-weight:700;fill:var(--stamp);font-family:Tajawal,Tahoma,sans-serif;';
+  return '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">'
+   +'<rect x="'+x+'" y="'+y+'" width="'+rw+'" height="'+rh+'" style="fill:var(--gold-bg);stroke:var(--ink);stroke-width:2.5;"/>'
+   +'<text x="'+(W/2)+'" y="'+(y-12)+'" text-anchor="middle" style="'+st+'">'+msFmt(it.w)+' سم</text>'
+   +'<text x="'+(W/2)+'" y="'+(y+rh+25)+'" text-anchor="middle" style="'+st+'">'+msFmt(it.w)+' سم</text>'
+   +'<text transform="translate('+(x-14)+','+(H/2)+') rotate(-90)" text-anchor="middle" style="'+st+'">'+msFmt(it.h)+' سم</text>'
+   +'<text transform="translate('+(x+rw+22)+','+(H/2)+') rotate(90)" text-anchor="middle" style="'+st+'">'+msFmt(it.h)+' سم</text>'
+   +'</svg>';
+}
+function msCalc(){
+  const p = measures.find(x=>x.id===msCur);
+  const out = document.getElementById('msResult');
+  if(!p){ out.textContent='—'; return; }
+  let tot = 0; p.items.forEach(it=>{ tot += it.w*it.h/10000; });
+  const price = parseFloat(p.price);
+  if(price>0 && tot>0){
+    out.textContent = Number(msFmt(tot*price)).toLocaleString('en-US',{maximumFractionDigits:2}) + ' ' + (settings.currency||'');
+  } else { out.textContent = '—'; }
+}
+function renderMeasures(){
+  const p = msEnsure();
+  document.getElementById('msPlace').innerHTML = measures.map(x=>'<option value="'+x.id+'"'+(x.id===msCur?' selected':'')+'>'+msEsc(x.name)+' ('+x.items.length+')</option>').join('');
+  const items = p.items;
+  let tot = 0; items.forEach(it=>{ tot += it.w*it.h/10000; });
+  const box = document.getElementById('msTotal');
+  box.style.display = items.length ? 'block' : 'none';
+  document.getElementById('msTotalLabel').textContent = 'إجمالي المساحة — ' + p.name + ' (' + items.length + ')';
+  document.getElementById('msTotalVal').textContent = msFmt(tot) + ' م²';
+  const pr = document.getElementById('msPrice');
+  if(document.activeElement !== pr) pr.value = p.price || '';
+  msCalc();
+  document.getElementById('msList').innerHTML = items.map((it,i)=>(
+    '<div class="panel" style="margin:0;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+    +'<strong>'+msEsc(it.n || ('قياس '+(items.length-i)))+'</strong>'
+    +'<button type="button" class="btn-danger-ghost" onclick="msDeleteItem(\''+it.id+'\')">حذف</button></div>'
+    + msSvg(it)
+    +'<div style="color:var(--ink-soft);font-size:13px;">المساحة: '+msFmt(it.w*it.h/10000)+' م² · '+(it.w===it.h?'مربع':'مستطيل')+'</div></div>'
+  )).join('');
+  document.getElementById('msEmpty').style.display = items.length ? 'none' : 'block';
+}
+function msSelectPlace(id){
+  msCur = id;
+  try{ localStorage.setItem(STORAGE_PREFIX + 'measCur', id); }catch(e){}
+  renderMeasures();
+}
+function msOpenForm(mode){
+  msMode = mode;
+  document.getElementById('msForm').style.display = 'flex';
+  const i = document.getElementById('msFormName');
+  i.value = mode==='ren' ? msEnsure().name : '';
+  i.focus();
+}
+function msCloseForm(){ msMode = null; document.getElementById('msForm').style.display = 'none'; }
+function msSaveForm(){
+  const n = document.getElementById('msFormName').value.trim();
+  if(!n) return;
+  if(msMode==='new'){
+    const p = {id:uid(), name:n, price:'', items:[]};
+    measures.push(p); msCur = p.id;
+    try{ localStorage.setItem(STORAGE_PREFIX + 'measCur', p.id); }catch(e){}
+  } else if(msMode==='ren'){
+    msEnsure().name = n;
+  }
+  msCloseForm(); msSave(); renderMeasures();
+}
+async function msDeletePlace(){
+  const p = msEnsure();
+  const ok = await confirmDelete('حذف المكان', 'سيتم حذف «' + p.name + '» مع كل قياساته.');
+  if(!ok) return;
+  measures = measures.filter(x=>x.id!==p.id);
+  msCur = null;
+  msSave(); renderMeasures();
+}
+function msAddItem(){
+  const w = parseFloat(document.getElementById('msW').value);
+  const h = parseFloat(document.getElementById('msH').value);
+  const msg = document.getElementById('msMsg');
+  msg.textContent = '';
+  if(!(w>0) || !(h>0)){ msg.textContent = 'أدخل العرض والارتفاع'; return; }
+  msEnsure().items.unshift({id:uid(), n:document.getElementById('msName').value.trim(), w:w, h:h});
+  msSave(); renderMeasures();
+  document.getElementById('msName').value = '';
+  document.getElementById('msW').value = '';
+  document.getElementById('msH').value = '';
+}
+async function msDeleteItem(id){
+  const ok = await confirmDelete('حذف القياس', 'هل تريد حذف هذا القياس؟');
+  if(!ok) return;
+  const p = msEnsure();
+  p.items = p.items.filter(x=>x.id!==id);
+  msSave(); renderMeasures();
+}
+function msPriceInput(v){
+  const p = msEnsure();
+  p.price = v;
+  msSave(); msCalc();
+}
+
 function switchToTab(tabName){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   const navEl = document.querySelector('.nav-item[data-tab="' + tabName + '"]');
@@ -1173,6 +1339,7 @@ function switchToTab(tabName){
   target.classList.add('fade-in');
   if(tabName==='dashboard') renderDashboard();
   if(tabName==='debts') renderDebts();
+  if(tabName==='measures') renderMeasures();
   if(tabName==='reports'){
     renderReports();
     renderPurchasesDetailReport();
