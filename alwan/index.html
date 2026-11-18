@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>محاسبة ألوان للدعاية</title>
+<title>محاسبة ألوان للدعاية - تطوير أرصدة العملاء</title>
 <link rel="manifest" id="manifestLink" href="./manifest.json">
 <meta name="theme-color" content="#3A1F63">
 <meta name="mobile-web-app-capable" content="yes">
@@ -226,6 +226,7 @@
       <div class="nav-caption">المبيعات والمخزون</div>
       <div class="nav-item" data-tab="invoices"><i class="ti ti-file-invoice"></i><span>الفواتير</span></div>
       <div class="nav-item" data-tab="customers"><i class="ti ti-users"></i><span>العملاء</span></div>
+      <div class="nav-item" data-tab="balances"><i class="ti ti-wallet"></i><span>أرصدة العملاء</span></div>
       <div class="nav-item" data-tab="products"><i class="ti ti-box"></i><span>المنتجات</span></div>
       <div class="nav-item" data-tab="meter"><i class="ti ti-printer"></i><span>المطبوعات</span></div>
       <div class="nav-caption">المشتريات والمالية</div>
@@ -271,6 +272,7 @@
           <div class="quick-shortcuts-grid">
             <button class="quick-shortcut" onclick="switchToTab('invoices')"><i class="ti ti-file-invoice"></i>الفواتير</button>
             <button class="quick-shortcut" onclick="switchToTab('customers')"><i class="ti ti-users"></i>العملاء</button>
+            <button class="quick-shortcut" onclick="switchToTab('balances')"><i class="ti ti-wallet"></i>أرصدة العملاء</button>
             <button class="quick-shortcut" onclick="switchToTab('debts')"><i class="ti ti-alert-circle"></i>الديون</button>
           </div>
         </div>
@@ -419,6 +421,24 @@
         </div>
         <p class="subtitle" style="margin-top:-6px;margin-bottom:14px;">مثل عمولة تركيب أو إيجار سيارة — تُخصم من أرباحك فقط في التقارير، ولا تظهر أو تُخصم من فاتورة العميل.</p>
 
+        <div class="panel" style="background:#f8f6fb;border:1px solid #e5deef;padding:14px;margin:14px 0;">
+          <h2 style="margin-bottom:10px;">استخدام رصيد العميل</h2>
+          <div class="row" style="align-items:center;">
+            <div class="field" style="max-width:220px;margin-bottom:0;">
+              <label><input type="checkbox" id="invUseBalance" style="width:auto;"> استخدام الرصيد المسبق</label>
+            </div>
+            <div class="field" style="max-width:220px;margin-bottom:0;">
+              <label>المبلغ المستخدم من الرصيد (د.ل)</label>
+              <input type="number" id="invBalanceAmount" min="0" step="0.01" value="0" disabled>
+            </div>
+            <div class="field" style="max-width:220px;margin-bottom:0;">
+              <label>الرصيد المتاح للعميل</label>
+              <div id="invAvailableBalance" style="padding:9px 0;font-weight:700;">0.00</div>
+            </div>
+          </div>
+          <div id="invBalanceNote" class="subtitle" style="margin:8px 0 0;">عند تفعيل الخيار يُقترح تلقائيًا استخدام أكبر مبلغ ممكن من الرصيد حتى قيمة الفاتورة، ويمكنك تعديل المبلغ لاستخدام جزء فقط. يُسجل الخصم في كشف حساب العميل.</div>
+        </div>
+
         <div class="row" style="align-items:center;margin-bottom:14px;">
           <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);cursor:pointer;">
             <input type="checkbox" id="invIsPaid" checked style="width:18px;height:18px;">
@@ -460,6 +480,39 @@
         </div>
         <div class="table-scroll"><table id="invoicesTable"><thead><tr><th>رقم</th><th>الأخ/الأخوة</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="invoicesEmpty" style="display:none;">لا توجد فواتير محفوظة بعد.</div>
+      </div>
+    </section>
+
+    <!-- CUSTOMER ADVANCE BALANCES -->
+    <section id="tab-balances" style="display:none;">
+      <h1>أرصدة العملاء والدفعات المقدمة</h1>
+      <p class="subtitle">تسجيل الحوالات المقدمة ومتابعة الإيداعات والخصومات والرصيد المتبقي لكل عميل.</p>
+      <div class="cards" id="balancesCards"></div>
+      <div class="panel">
+        <h2>تسجيل حوالة مقدمة</h2>
+        <div class="row">
+          <div class="field"><label>العميل</label><select id="balanceCustomer"></select></div>
+          <div class="field"><label>المبلغ (د.ل)</label><input type="number" id="balanceDepositAmount" min="0.01" step="0.01"></div>
+          <div class="field"><label>التاريخ</label><input type="date" id="balanceDepositDate"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>اسم المصرف</label><input id="balanceBankName" type="text"></div>
+          <div class="field"><label>رقم الحوالة</label><input id="balanceTransferNumber" type="text"></div>
+          <div class="field"><label>ملاحظات</label><input id="balanceDepositNote" type="text"></div>
+        </div>
+        <button class="btn-stamp" id="saveBalanceDeposit">حفظ الحوالة</button>
+      </div>
+      <div class="panel">
+        <h2>كشف حساب العميل</h2>
+        <div class="row"><div class="field" style="max-width:360px"><label>اختر العميل</label><select id="balanceStatementCustomer"></select></div></div>
+        <div id="balanceStatementSummary" class="subtitle"></div>
+        <button type="button" class="btn-stamp no-print" id="printCustomerStatementBtn" onclick="printCustomerStatement()" style="margin:10px 0 14px;">طباعة كشف الحساب</button>
+        <div class="table-scroll"><table id="balanceStatementTable"><thead><tr><th>التاريخ</th><th>نوع الحركة</th><th>التفاصيل</th><th>إيداع</th><th>خصم</th><th>الرصيد بعد الحركة</th></tr></thead><tbody></tbody></table></div>
+        <div id="balanceStatementEmpty" class="empty" style="display:none;">لا توجد حركات لهذا العميل.</div>
+      </div>
+      <div class="panel">
+        <h2>أرصدة جميع العملاء</h2>
+        <div class="table-scroll"><table id="customerBalancesTable"><thead><tr><th>العميل</th><th>إجمالي الإيداعات</th><th>إجمالي الخصومات</th><th>الرصيد المتبقي</th></tr></thead><tbody></tbody></table></div>
       </div>
     </section>
 
@@ -807,7 +860,7 @@ const FIREBASE_CONFIG = {
   appId: "1:347225260547:web:0a81a8790c6e267f768436"
 };
 const SYNC_CODE = "alwan-dawaya-2026-sync-x7f3q9k1";
-const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers','expenses','suppliers','measures'];
+const SYNC_KEYS = ['products','meterTypes','purchases','invoices','settings','invoiceCounter','customers','expenses','suppliers','measures','customerLedger'];
 
 let fbDb = null;
 let fbSyncEnabled = false;
@@ -830,7 +883,7 @@ async function pushToCloud(){
   if(!fbSyncEnabled || !fbDb) return;
   try{
     await fbDocRef().set({
-      products, meterTypes, purchases, invoices, customers, expenses, suppliers, measures,
+      products, meterTypes, purchases, invoices, customers, expenses, suppliers, measures, customerLedger,
       settings: settingsForSync(), invoiceCounter,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -850,6 +903,7 @@ async function applyIncomingCloudData(data){
   if(data.expenses) expenses = data.expenses;
   if(data.suppliers) suppliers = data.suppliers;
   if(data.measures) measures = data.measures;
+  if(Array.isArray(data.customerLedger)) customerLedger = data.customerLedger;
   if(data.settings) settings = data.settings;
   if(typeof data.invoiceCounter === 'number') invoiceCounter = data.invoiceCounter;
 
@@ -863,6 +917,7 @@ async function applyIncomingCloudData(data){
     localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
     localStorage.setItem(STORAGE_PREFIX + 'suppliers', JSON.stringify(suppliers));
     localStorage.setItem(STORAGE_PREFIX + 'measures', JSON.stringify(measures));
+    localStorage.setItem(STORAGE_PREFIX + 'customerLedger', JSON.stringify(customerLedger));
     localStorage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(settings));
     localStorage.setItem(STORAGE_PREFIX + 'invoiceCounter', JSON.stringify(invoiceCounter));
   }catch(e){ console.error(e); }
@@ -882,6 +937,7 @@ async function applyIncomingCloudData(data){
   renderMeterTable();
   renderCustomersTable();
   updateCustomersDatalist();
+  renderCustomerBalances();
   renderExpensesTable();
   renderSuppliersTable();
   updateSuppliersDatalist();
@@ -950,6 +1006,7 @@ let meterTypes = [];
 let purchases = [];
 let invoices = [];
 let customers = [];
+let customerLedger = [];
 let expenses = [];
 let suppliers = [];
 let measures = [];
@@ -1034,6 +1091,7 @@ async function loadAll(){
   purchases = await Store.get('purchases', []);
   invoices = await Store.get('invoices', []);
   customers = await Store.get('customers', []);
+  customerLedger = await Store.get('customerLedger', []);
   expenses = await Store.get('expenses', []);
   suppliers = await Store.get('suppliers', []);
   measures = await Store.get('measures', []);
@@ -1339,6 +1397,7 @@ function switchToTab(tabName){
   target.classList.add('fade-in');
   if(tabName==='dashboard') renderDashboard();
   if(tabName==='debts') renderDebts();
+  if(tabName==='balances') renderCustomerBalances();
   if(tabName==='measures') renderMeasures();
   if(tabName==='reports'){
     renderReports();
@@ -1578,10 +1637,167 @@ document.getElementById('invExtraCost').addEventListener('input', renderInvoiceT
 
 let editingInvoiceNumber = null;
 
+function escapeHtml(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));}
+function customerRecordByName(name){
+  const key=String(name||'').trim().toLowerCase();
+  return customers.find(c=>String(c.name||'').trim().toLowerCase()===key) || null;
+}
+function ledgerBalance(customerId){
+  return customerLedger.filter(x=>x.customerId===customerId).reduce((s,x)=>s+(x.direction==='credit'?Number(x.amount)||0:-(Number(x.amount)||0)),0);
+}
+function ledgerTotals(customerId){
+  const rows=customerLedger.filter(x=>x.customerId===customerId);
+  return {credits:rows.filter(x=>x.direction==='credit').reduce((s,x)=>s+(Number(x.amount)||0),0),debits:rows.filter(x=>x.direction==='debit').reduce((s,x)=>s+(Number(x.amount)||0),0),balance:ledgerBalance(customerId)};
+}
+function addLedgerEntry(entry){
+  customerLedger.push({id:'led_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8),createdAt:new Date().toISOString(),...entry});
+}
+function currentInvoiceBeingEdited(){
+  return editingInvoiceNumber!==null ? invoices.find(x=>x.number===editingInvoiceNumber) : null;
+}
+function invoiceBalanceUsed(inv){return Math.max(0,Number(inv?.balanceUsed)||0);}
+function refreshInvoiceBalanceUI(){
+  const enabled=document.getElementById('invUseBalance');
+  const amount=document.getElementById('invBalanceAmount');
+  const availableEl=document.getElementById('invAvailableBalance');
+  if(!enabled||!amount||!availableEl)return;
+  const c=customerRecordByName(document.getElementById('custName').value);
+  const editing=currentInvoiceBeingEdited();
+  const available=c ? ledgerBalance(c.id)+(editing && editing.customerId===c.id ? invoiceBalanceUsed(editing) : 0) : 0;
+  availableEl.textContent=fmt(Math.max(0,available));
+  amount.disabled=!enabled.checked;
+  const due=Math.max(0,Number(computeInvoiceTotals().net)||0);
+  const limit=Math.max(0,Math.min(available,due));
+  amount.max=limit;
+  if(!enabled.checked) amount.value='0';
+  else if(Number(amount.value)>limit) amount.value=limit.toFixed(2);
+}
+function reconcileInvoiceBalance(inv,newAmount){
+  const amount=Number(newAmount)||0;
+  if(!Number.isFinite(amount)||amount<0) throw new Error('قيمة الرصيد المستخدمة غير صحيحة.');
+  if(!inv.invoiceId) inv.invoiceId='inv_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
+  const oldAmount=invoiceBalanceUsed(inv);
+  const oldCustomerId=inv.balanceCustomerId||customerRecordByName(inv.customer)?.id||null;
+  const customer=customerRecordByName(inv.customer);
+  if(amount>0 && !customer) throw new Error('لاستخدام الرصيد يجب اختيار عميل مسجل في النظام.');
+  const newCustomerId=customer?.id||null;
+  const sameCustomer=!!oldCustomerId && oldCustomerId===newCustomerId;
+  const effectiveOld=sameCustomer?oldAmount:0;
+  const delta=Number((amount-effectiveOld).toFixed(2));
+  // Validate the complete change before writing any ledger movement.
+  if(delta>0){
+    const available=customer?ledgerBalance(customer.id):0;
+    if(delta>available+0.001) throw new Error('الرصيد المتاح لا يكفي لإتمام الخصم.');
+  }
+  if(oldAmount>0 && oldCustomerId && !sameCustomer){
+    const oldCustomer=customers.find(c=>c.id===oldCustomerId);
+    addLedgerEntry({customerId:oldCustomerId,customerName:oldCustomer?.name||inv.customer,direction:'credit',amount:oldAmount,date:todayStr(),kind:'reversal',description:'إعادة الرصيد بسبب تغيير عميل الفاتورة رقم #'+inv.number,invoiceId:inv.invoiceId});
+  }
+  if(Math.abs(delta)>=0.005){
+    if(!customer) throw new Error('تعذر ربط الفاتورة بسجل العميل.');
+    if(delta>0){
+      addLedgerEntry({customerId:customer.id,customerName:customer.name,direction:'debit',amount:delta,date:inv.date,kind:'invoice',description:'استخدام رصيد للفاتورة رقم #'+inv.number,invoiceId:inv.invoiceId});
+    }else{
+      addLedgerEntry({customerId:customer.id,customerName:customer.name,direction:'credit',amount:Math.abs(delta),date:todayStr(),kind:'reversal',description:'عكس فرق استخدام رصيد الفاتورة رقم #'+inv.number,invoiceId:inv.invoiceId});
+    }
+  }
+  inv.balanceUsed=amount;
+  inv.balanceCustomerId=amount>0?newCustomerId:null;
+}
+
+function populateBalanceCustomerSelects(){
+  const options='<option value="">اختر العميل</option>'+customers.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar')).map(c=>`<option value="${String(c.id).replace(/"/g,'&quot;')}">${escapeHtml(c.name)}</option>`).join('');
+  ['balanceCustomer','balanceStatementCustomer'].forEach(id=>{const el=document.getElementById(id);if(el){const old=el.value;el.innerHTML=options;if(old)el.value=old;}});
+}
+function renderCustomerBalances(){
+  populateBalanceCustomerSelects();
+  const totals=customers.map(c=>({c,t:ledgerTotals(c.id)})).filter(x=>x.t.credits||x.t.debits);
+  const all=totals.reduce((a,x)=>({credits:a.credits+x.t.credits,debits:a.debits+x.t.debits,balance:a.balance+x.t.balance}),{credits:0,debits:0,balance:0});
+  document.getElementById('balancesCards').innerHTML=`<div class="stat-card"><div class="label">إجمالي الإيداعات</div><div class="value">${fmt(all.credits)}</div></div><div class="stat-card"><div class="label">إجمالي الخصومات</div><div class="value">${fmt(all.debits)}</div></div><div class="stat-card"><div class="label">الأرصدة المتبقية</div><div class="value">${fmt(all.balance)}</div></div>`;
+  document.querySelector('#customerBalancesTable tbody').innerHTML=totals.map(x=>`<tr><td>${escapeHtml(x.c.name)}</td><td>${fmt(x.t.credits)}</td><td>${fmt(x.t.debits)}</td><td><strong>${fmt(x.t.balance)}</strong></td></tr>`).join('');
+  const selected=document.getElementById('balanceStatementCustomer').value;
+  renderCustomerStatement(selected);
+}
+function renderCustomerStatement(customerId){
+  const rows=customerLedger.filter(x=>x.customerId===customerId).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.createdAt).localeCompare(String(b.createdAt)));
+  let running=0;
+  const html=rows.map(x=>{running+=(x.direction==='credit'?1:-1)*(Number(x.amount)||0);return `<tr><td>${escapeHtml(x.date||'')}</td><td>${x.direction==='credit'?'إيداع':'خصم'}</td><td>${escapeHtml(x.description||'')}</td><td>${x.direction==='credit'?fmt(x.amount):'—'}</td><td>${x.direction==='debit'?fmt(x.amount):'—'}</td><td>${fmt(running)}</td></tr>`;}).join('');
+  document.querySelector('#balanceStatementTable tbody').innerHTML=html;
+  const c=customers.find(x=>x.id===customerId);const t=c?ledgerTotals(c.id):{credits:0,debits:0,balance:0};
+  document.getElementById('balanceStatementSummary').textContent=c?`${c.name} — إجمالي الإيداعات: ${fmt(t.credits)} | الخصومات: ${fmt(t.debits)} | الرصيد المتبقي: ${fmt(t.balance)}`:'';
+  document.getElementById('balanceStatementEmpty').style.display=rows.length?'none':'block';
+}
+async function printCustomerStatement(){
+  const customerId=document.getElementById('balanceStatementCustomer').value;
+  const customer=customers.find(c=>c.id===customerId);
+  if(!customer){alert('اختر العميل أولاً لطباعة كشف الحساب.');return;}
+  const rows=customerLedger.filter(x=>x.customerId===customerId).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.createdAt).localeCompare(String(b.createdAt)));
+  if(!rows.length){alert('لا توجد حركات مسجلة لهذا العميل.');return;}
+  let running=0;
+  const body=rows.map(x=>{
+    const amount=Number(x.amount)||0;
+    running+=(x.direction==='credit'?1:-1)*amount;
+    return `<tr><td>${escapeHtml(x.date||'')}</td><td>${x.direction==='credit'?'إيداع':'خصم'}</td><td>${escapeHtml(x.description||'')}</td><td>${x.direction==='credit'?fmt(amount):'—'}</td><td>${x.direction==='debit'?fmt(amount):'—'}</td><td>${fmt(running)}</td></tr>`;
+  }).join('');
+  const totals=ledgerTotals(customerId);
+  document.getElementById('printArea').innerHTML=`
+    <div dir="rtl" style="font-family:Arial,sans-serif;color:#222;">
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:10px;"><img src="invoice-logo.png" style="width:58px;height:58px;object-fit:contain;"><div><h2 style="margin:0 0 5px;font-size:20px;">${escapeHtml(settings.officeName||'ألوان للدعاية والإعلان')}</h2><div style="font-size:11px;color:#555;">${escapeHtml(settings.phone||'')} ${settings.address?' — '+escapeHtml(settings.address):''}</div></div></div>
+        <div style="text-align:left;font-size:12px;"><strong>كشف حساب عميل</strong><div>تاريخ الطباعة: ${todayStr()}</div></div>
+      </div>
+      <h3 style="font-size:17px;margin:0 0 12px;">العميل: ${escapeHtml(customer.name)}</h3>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;">
+        <div>إجمالي الإيداعات: <strong>${fmt(totals.credits)}</strong></div><div>إجمالي الخصومات: <strong>${fmt(totals.debits)}</strong></div><div>الرصيد المتبقي: <strong>${fmt(totals.balance)}</strong></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#eee;"><th style="padding:8px;border:1px solid #999;">التاريخ</th><th style="padding:8px;border:1px solid #999;">نوع الحركة</th><th style="padding:8px;border:1px solid #999;">البيان</th><th style="padding:8px;border:1px solid #999;">إيداع</th><th style="padding:8px;border:1px solid #999;">خصم</th><th style="padding:8px;border:1px solid #999;">الرصيد</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+      <div style="margin-top:24px;text-align:center;font-size:11px;color:#666;">نهاية كشف الحساب</div>
+    </div>`;
+  const logo=document.querySelector('#printArea img');
+  const waitForImage=img=>new Promise(resolve=>{if(img.complete){resolve();return;}img.onload=resolve;img.onerror=resolve;});
+  await waitForImage(logo);
+  if(!logo.naturalWidth){const appLogo=document.getElementById('sidebarLogo');if(appLogo&&appLogo.src){logo.src=appLogo.currentSrc||appLogo.src;await waitForImage(logo);}}
+  window.print();
+}
+document.getElementById('balanceStatementCustomer').addEventListener('change',e=>renderCustomerStatement(e.target.value));
+document.getElementById('saveBalanceDeposit').addEventListener('click',async()=>{
+  const customer=customers.find(c=>c.id===document.getElementById('balanceCustomer').value);
+  const amount=Number(document.getElementById('balanceDepositAmount').value);
+  const date=document.getElementById('balanceDepositDate').value||todayStr();
+  const bank=document.getElementById('balanceBankName').value.trim();
+  const transfer=document.getElementById('balanceTransferNumber').value.trim();
+  if(!customer){alert('اختر العميل أولاً.');return;}if(!(amount>0)){alert('أدخل مبلغاً صحيحاً.');return;}if(!bank||!transfer){alert('أدخل اسم المصرف ورقم الحوالة.');return;}
+  addLedgerEntry({customerId:customer.id,customerName:customer.name,direction:'credit',amount:Number(amount.toFixed(2)),date,kind:'deposit',bankName:bank,transferNumber:transfer,description:'حوالة مصرفية مقدمة — '+bank+' — '+transfer+' '+document.getElementById('balanceDepositNote').value.trim()});
+  await Store.set('customerLedger',customerLedger);
+  document.getElementById('balanceDepositAmount').value='';document.getElementById('balanceBankName').value='';document.getElementById('balanceTransferNumber').value='';document.getElementById('balanceDepositNote').value='';
+  renderCustomerBalances();document.getElementById('balanceStatementCustomer').value=customer.id;renderCustomerStatement(customer.id);alert('تم حفظ الحوالة وإضافة المبلغ إلى رصيد العميل.');
+});
+document.getElementById('balanceDepositDate').value=todayStr();
+document.getElementById('custName').addEventListener('input',refreshInvoiceBalanceUI);
+document.getElementById('invUseBalance').addEventListener('change',()=>{
+  const amountEl=document.getElementById('invBalanceAmount');
+  if(document.getElementById('invUseBalance').checked){
+    const customer=customerRecordByName(document.getElementById('custName').value);
+    const editing=currentInvoiceBeingEdited();
+    const available=customer ? ledgerBalance(customer.id)+(editing && (editing.balanceCustomerId||customerRecordByName(editing.customer)?.id)===customer.id ? invoiceBalanceUsed(editing) : 0) : 0;
+    const due=Number(computeInvoiceTotals().net)||0;
+    // Selecting the option automatically applies as much of the available balance as possible.
+    // The user can still reduce this amount to make a partial-balance payment.
+    amountEl.value=Math.max(0,Math.min(available,due)).toFixed(2);
+  }else{
+    amountEl.value='0';
+  }
+  refreshInvoiceBalanceUI();
+});
+document.getElementById('invBalanceAmount').addEventListener('input',refreshInvoiceBalanceUI);
+
 async function saveInvoice(isProforma){
   if(currentInvoiceItems.length===0){ alert('أضف صنفاً واحداً على الأقل قبل الحفظ.'); return; }
   const customer = document.getElementById('custName').value.trim();
-  if(!customer){ alert('أدخل اسم الأخ/الأخوة.'); return; }
+  if(!customer){ alert('أدخل اسم العميل.'); return; }
 
   if(!isProforma){
     const stockError = validateStock(currentInvoiceItems);
@@ -1595,35 +1811,46 @@ async function saveInvoice(isProforma){
   const bankName = isPaid && paymentMethod === 'حوالة مصرفية' ? document.getElementById('invBankName').value.trim() : '';
   const transferNumber = isPaid && paymentMethod === 'حوالة مصرفية' ? document.getElementById('invTransferNumber').value.trim() : '';
   const t = computeInvoiceTotals();
+  const editingExisting = editingInvoiceNumber !== null ? invoices.find(i=>i.number===editingInvoiceNumber) : null;
+  if(editingInvoiceNumber !== null && !editingExisting){alert('تعذر العثور على الفاتورة المطلوب تعديلها. أعد فتح الفاتورة ثم حاول مرة أخرى.');return;}
+  const useBalance = !isProforma && document.getElementById('invUseBalance').checked;
+  const requestedBalance = useBalance ? Number(document.getElementById('invBalanceAmount').value)||0 : 0;
+  if(!Number.isFinite(requestedBalance)||requestedBalance<0||requestedBalance>t.net+0.001){alert('قيمة الرصيد المستخدمة غير صحيحة أو أكبر من قيمة الفاتورة.');return;}
+  const targetCustomer = customerRecordByName(customer);
+  const availableForInvoice = targetCustomer ? ledgerBalance(targetCustomer.id) + (editingExisting && (editingExisting.balanceCustomerId||customerRecordByName(editingExisting.customer)?.id)===targetCustomer.id ? invoiceBalanceUsed(editingExisting) : 0) : 0;
+  if(requestedBalance > availableForInvoice + 0.001){alert('المبلغ المطلوب أكبر من الرصيد المتاح للعميل.');return;}
 
-  let invoice;
-  if(editingInvoiceNumber !== null){
-    invoice = invoices.find(i=>i.number===editingInvoiceNumber);
-    invoice.customer = customer;
-    invoice.date = date;
-    invoice.items = JSON.parse(JSON.stringify(currentInvoiceItems));
-    invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.extraCost = t.extraCost; invoice.total = t.net;
-    invoice.paid = isPaid;
-    invoice.paymentMethod = paymentMethod;
-    invoice.bankName = bankName;
-    invoice.transferNumber = transferNumber;
-    invoice.proforma = isProforma;
+  // Prepare a draft first. Do not alter the saved invoice until the balance change is validated.
+  const invoice = editingExisting ? JSON.parse(JSON.stringify(editingExisting)) : {
+    invoiceId: 'inv_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
+    number: nextInvoiceNumberForYear(dateYear(date)),
+    customer, date,
+    items: [], subtotal: 0, printCost: 0, extraCost: 0, total: 0,
+    paid: isPaid, paymentMethod, bankName, transferNumber, proforma: isProforma
+  };
+  invoice.customer = customer;
+  invoice.date = date;
+  invoice.items = JSON.parse(JSON.stringify(currentInvoiceItems));
+  invoice.subtotal = t.subtotal; invoice.printCost = t.printCostTotal; invoice.extraCost = t.extraCost; invoice.total = t.net;
+  invoice.paid = isPaid;
+  invoice.paymentMethod = paymentMethod;
+  invoice.bankName = bankName;
+  invoice.transferNumber = transferNumber;
+  invoice.proforma = isProforma;
+
+  // Also reverse a previously used balance if an existing final invoice is changed to proforma.
+  if(!isProforma || (editingExisting && invoiceBalanceUsed(editingExisting)>0)){
+    try{reconcileInvoiceBalance(invoice,requestedBalance);}
+    catch(err){alert(err.message||'تعذر تسوية رصيد العميل.');return;}
+  }
+
+  if(editingExisting){
+    Object.assign(editingExisting,invoice);
     editingInvoiceNumber = null;
     document.getElementById('saveInvoiceFinalBtn').textContent = 'حفظ كفاتورة نهائية';
     document.getElementById('saveInvoiceProformaBtn').textContent = 'حفظ فاتورة مبدئية';
     document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
   } else {
-    invoice = {
-      number: nextInvoiceNumberForYear(dateYear(date)),
-      customer, date,
-      items: JSON.parse(JSON.stringify(currentInvoiceItems)),
-      subtotal: t.subtotal, printCost: t.printCostTotal, extraCost: t.extraCost, total: t.net,
-      paid: isPaid,
-      paymentMethod: paymentMethod,
-      bankName: bankName,
-      transferNumber: transferNumber,
-      proforma: isProforma
-    };
     invoices.push(invoice);
     setInvoiceCounterForYear(dateYear(date), invoice.number);
     invoiceCounter = invoice.number + 1;
@@ -1638,16 +1865,20 @@ async function saveInvoice(isProforma){
   findOrCreateCustomerByName(customer);
   await Store.set('customers', customers);
   await Store.set('invoices', invoices);
+  await Store.set('customerLedger', customerLedger);
 
   currentInvoiceItems = [];
   document.getElementById('custName').value='';
   document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
   document.getElementById('invIsPaid').checked = true;
+  document.getElementById('invUseBalance').checked = false;
+  document.getElementById('invBalanceAmount').value = '0';
   document.getElementById('invPaymentMethod').value = 'نقدي';
   document.getElementById('invBankName').value = '';
   document.getElementById('invTransferNumber').value = '';
   updatePaymentMethodUI();
+  refreshInvoiceBalanceUI();
   renderInvoiceItemsUI();
   renderInvoicesTable();
   renderProductsTable();
@@ -1660,6 +1891,7 @@ async function saveInvoice(isProforma){
   renderDashboard();
   printInvoice(invoice, isProforma);
 }
+
 function updatePaymentMethodUI(){
   const paid = document.getElementById('invIsPaid').checked;
   const wrap = document.getElementById('paymentMethodWrap');
@@ -1702,6 +1934,8 @@ async function editInvoice(number){
   document.getElementById('invDate').value = inv.date;
   document.getElementById('invExtraCost').value = inv.extraCost || 0;
   document.getElementById('invIsPaid').checked = (inv.paid !== false);
+  document.getElementById('invUseBalance').checked = invoiceBalanceUsed(inv)>0;
+  document.getElementById('invBalanceAmount').value = invoiceBalanceUsed(inv);
   document.getElementById('invPaymentMethod').value = inv.paymentMethod || 'نقدي';
   document.getElementById('invBankName').value = inv.bankName || '';
   document.getElementById('invTransferNumber').value = inv.transferNumber || '';
@@ -1713,6 +1947,7 @@ async function editInvoice(number){
   document.getElementById('cancelInvoiceEditBtn').style.display = 'inline-block';
   switchToTab('invoices');
   renderInvoiceItemsUI();
+  refreshInvoiceBalanceUI();
   document.getElementById('custName').scrollIntoView({behavior:'smooth', block:'center'});
 }
 
@@ -1733,6 +1968,9 @@ async function cancelInvoiceEdit(){
   document.getElementById('invExtraCost').value=0;
   document.getElementById('invDate').value='';
   document.getElementById('invIsPaid').checked = true;
+  document.getElementById('invUseBalance').checked = false;
+  document.getElementById('invBalanceAmount').value = '0';
+  refreshInvoiceBalanceUI();
   document.getElementById('saveInvoiceFinalBtn').textContent = 'حفظ كفاتورة نهائية';
   document.getElementById('saveInvoiceProformaBtn').textContent = 'حفظ فاتورة مبدئية';
   document.getElementById('cancelInvoiceEditBtn').style.display = 'none';
@@ -1744,6 +1982,7 @@ async function deleteInvoice(number){
   if(!(await confirmDelete('حذف الفاتورة رقم #' + number + '؟', 'سيتم إرجاع كمية المنتجات المباعة فيها إلى المخزون (إن وجدت).'))) return;
   const inv = invoices.find(i=>i.number===number);
   if(inv && !canModifyDate(inv.date)) return;
+  if(inv && invoiceBalanceUsed(inv)>0){const c=customerRecordByName(inv.customer);if(c){addLedgerEntry({customerId:c.id,customerName:c.name,direction:'credit',amount:invoiceBalanceUsed(inv),date:todayStr(),kind:'reversal',description:'إعادة رصيد بسبب حذف الفاتورة رقم #'+inv.number,invoiceId:inv.invoiceId||null});await Store.set('customerLedger',customerLedger);}}
   if(inv && !inv.proforma){
     restoreStock(inv.items);
     await Store.set('products', products);
@@ -1790,6 +2029,7 @@ function renderInvoicesTable(){
     let badge = paid
       ? `<span class="badge badge-green">مدفوعة</span>`
       : `<span class="badge" style="background:var(--danger-bg);color:var(--danger);">دين</span>`;
+    if(!i.proforma && invoiceBalanceUsed(i)>0 && i.paid===false){badge=`<span class="badge" style="background:#fff4db;color:#8b6412;">رصيد مستخدم / متبقٍ ${fmt(Math.max(0,i.total-invoiceBalanceUsed(i)))}</span>`;}
     if(i.proforma){
       badge = `<span class="badge badge-gold">مبدئية</span>`;
     }
@@ -1842,14 +2082,15 @@ function renderDebts(){
   const currentUnpaid=invoices.filter(i=>i.date>=start && i.date<=end && i.paid===false && !i.proforma).sort((a,b)=>b.number-a.number);
   const carriedUnpaid=invoices.filter(i=>i.date<start && i.paid===false && !i.proforma).sort((a,b)=>b.number-a.number);
   const allUnpaid=[...currentUnpaid,...carriedUnpaid];
-  const totalDebt=allUnpaid.reduce((s,i)=>s+i.total,0);
-  const carriedTotal=carriedUnpaid.reduce((s,i)=>s+i.total,0);
+  const outstanding=i=>Math.max(0,(Number(i.total)||0)-invoiceBalanceUsed(i));
+  const totalDebt=allUnpaid.reduce((s,i)=>s+outstanding(i),0);
+  const carriedTotal=carriedUnpaid.reduce((s,i)=>s+outstanding(i),0);
   document.getElementById('debtsCards').innerHTML=`
-    <div class="stat-card"><div class="label">${selectedPeriod==='ALL'?'الديون المستحقة':'ديون الشهر المحدد'}</div><div class="value">${fmt(currentUnpaid.reduce((s,i)=>s+i.total,0))}</div></div>
+    <div class="stat-card"><div class="label">${selectedPeriod==='ALL'?'الديون المستحقة':'ديون الشهر المحدد'}</div><div class="value">${fmt(currentUnpaid.reduce((s,i)=>s+outstanding(i),0))}</div></div>
     <div class="stat-card"><div class="label">رصيد مرحل من أشهر سابقة</div><div class="value">${fmt(carriedTotal)}</div></div>
     <div class="stat-card"><div class="label">إجمالي الديون المستحقة</div><div class="value">${fmt(totalDebt)}</div></div>`;
   document.querySelector('#debtsTable tbody').innerHTML=allUnpaid.map(i=>`
-    <tr><td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(i.total)}</td><td>${selectedPeriod==='ALL'?'مستحقة':(i.date<start?'مرحل':'هذا الشهر')}</td>
+    <tr><td>#${i.number}</td><td>${i.customer}</td><td>${i.date}</td><td>${fmt(outstanding(i))}</td><td>${selectedPeriod==='ALL'?'مستحقة':(i.date<start?'مرحل':'هذا الشهر')}</td>
       <td><button class="btn-primary" onclick="markDebtPaid(${i.number})">تحديد كمدفوعة</button></td></tr>`).join('');
   document.getElementById('debtsEmpty').style.display=allUnpaid.length?'none':'block';
 }
@@ -1888,6 +2129,7 @@ function printInvoice(inv, isProforma){
     </div>
     <div style="border-bottom:2px solid #1C1B1A;margin-bottom:14px;"></div>
     <p><strong>الأخ / الأخوة:</strong> ${inv.customer}</p>
+    ${!isProforma && invoiceBalanceUsed(inv)>0 ? `<p><strong>المخصوم من رصيد العميل:</strong> ${fmt(invoiceBalanceUsed(inv))}</p>` : ''}
     ${!isProforma && inv.paid !== false ? `<p><strong>طريقة الدفع:</strong> ${inv.paymentMethod || 'نقدي'}</p>${(inv.paymentMethod === 'حوالة مصرفية') ? `<p><strong>اسم المصرف:</strong> ${inv.bankName || 'غير محدد'} &nbsp;&nbsp; <strong>رقم الحوالة:</strong> ${inv.transferNumber || 'غير محدد'}</p>` : ''}` : (!isProforma ? `<p><strong>حالة الدفع:</strong> دين على العميل</p>` : '')}
     <table style="width:100%;border-collapse:collapse;margin-top:6px;">
       <thead><tr style="border-bottom:2px solid #1C1B1A;"><th style="text-align:right;padding:8px;">الصنف</th><th style="text-align:right;padding:8px;">الكمية / المساحة</th><th style="text-align:right;padding:8px;">السعر</th><th style="text-align:right;padding:8px;">الإجمالي</th></tr></thead>
@@ -3098,7 +3340,7 @@ function exportBackup(){
   const backup = {
     backupVersion: 2,
     exportedAt: new Date().toISOString(),
-    products, meterTypes, purchases, invoices, customers, expenses, suppliers, settings, invoiceCounter
+    products, meterTypes, purchases, invoices, customers, expenses, suppliers, measures, customerLedger, settings, invoiceCounter
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -3130,8 +3372,10 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
     purchases = Array.isArray(data.purchases) ? data.purchases : [];
     invoices = Array.isArray(data.invoices) ? data.invoices : [];
     customers = Array.isArray(data.customers) ? data.customers : [];
+    if(Array.isArray(data.customerLedger)) customerLedger = data.customerLedger;
     expenses = Array.isArray(data.expenses) ? data.expenses : [];
     suppliers = Array.isArray(data.suppliers) ? data.suppliers : [];
+    measures = Array.isArray(data.measures) ? data.measures : measures;
     settings = data.settings || settings;
     invoiceCounter = Number(data.invoiceCounter) || 1;
 
@@ -3140,8 +3384,10 @@ document.getElementById('importFileInput').addEventListener('change', async (e)=
     await Store.set('purchases', purchases);
     await Store.set('invoices', invoices);
     await Store.set('customers', customers);
+    await Store.set('customerLedger', customerLedger);
     await Store.set('expenses', expenses);
     await Store.set('suppliers', suppliers);
+    await Store.set('measures', measures);
     await Store.set('settings', settings);
     await Store.set('invoiceCounter', invoiceCounter);
 
