@@ -1,5 +1,7 @@
-const CACHE_NAME = 'alwan-v35-pwa-isolated-1';
+const CACHE_NAME = 'alwan-v35-pwa-isolated-2';
 const APP_PREFIX = 'alwan-v35-pwa-isolated-';
+
+const APP_URL = new URL('./index.html', self.registration.scope).href;
 
 const APP_FILES = [
   './',
@@ -8,27 +10,29 @@ const APP_FILES = [
   './icon-192.png',
   './icon-512.png',
   './invoice-logo.png'
-];
+].map(file => new URL(file, self.registration.scope).href);
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
 
-    const response = await fetch('./index.html', {
-      cache: 'reload'
+    const response = await fetch(APP_URL, {
+      cache: 'no-store'
     });
 
     if (!response.ok) {
       throw new Error('تعذر تحميل صفحة المحاسبة');
     }
 
-    await cache.put('./index.html', response.clone());
+    await cache.put(APP_URL, response.clone());
 
     await Promise.allSettled(
-      APP_FILES.filter(file => file !== './index.html').map(async file => {
-        const result = await fetch(file, { cache: 'reload' });
-        if (result.ok) await cache.put(file, result);
-      })
+      APP_FILES
+        .filter(file => file !== APP_URL)
+        .map(async file => {
+          const result = await fetch(file, { cache: 'no-store' });
+          if (result.ok) await cache.put(file, result);
+        })
     );
 
     await self.skipWaiting();
@@ -55,48 +59,50 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
+  const scopeURL = new URL(self.registration.scope);
 
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== scopeURL.origin) return;
+  if (!url.pathname.startsWith(scopeURL.pathname)) return;
+
+  const isHTML =
+    request.mode === 'navigate' ||
+    url.pathname.endsWith('.html');
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
 
-    const cached = await cache.match(request, {
-      ignoreSearch: request.mode === 'navigate'
-    });
-
-    if (request.mode === 'navigate') {
+    if (isHTML) {
       try {
-        const response = await fetch(request);
+        const response = await fetch(
+          new Request(request, { cache: 'no-store' })
+        );
 
-        if (response && response.ok) {
-          await cache.put('./index.html', response.clone());
+        if (response.ok) {
+          await cache.put(APP_URL, response.clone());
         }
 
         return response;
       } catch (_) {
-        return cached || await cache.match('./index.html');
+        return (
+          await cache.match(APP_URL) ||
+          Response.error()
+        );
       }
     }
 
+    const cached = await cache.match(request);
     if (cached) return cached;
 
     try {
       const response = await fetch(request);
 
-      if (
-        response &&
-        response.ok &&
-        url.pathname.startsWith(
-          new URL('./', self.registration.scope).pathname
-        )
-      ) {
+      if (response.ok) {
         await cache.put(request, response.clone());
       }
 
       return response;
     } catch (_) {
-      return cached || Response.error();
+      return Response.error();
     }
   })());
 });
